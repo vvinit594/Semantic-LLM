@@ -1,52 +1,33 @@
 import "./load-env";
-import Fastify from "fastify";
-import { createRedisClient, pingRedis } from "@semantic-llm/cache";
+import {
+  DEFAULT_EXACT_CACHE_TTL_SECONDS,
+  ExactCache,
+  createRedisClient,
+  pingRedis,
+} from "@semantic-llm/cache";
 import { DEFAULT_GEMINI_MODEL, GeminiProvider } from "@semantic-llm/llm";
-import { PROJECT_NAME } from "@semantic-llm/shared";
-import { registerChatRoute } from "./chat";
+import { buildApp } from "./app";
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
 const redisUrl = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+const ttlSeconds = readTtlSeconds(process.env.CACHE_TTL_SECONDS);
 
 if (!Number.isInteger(port) || port <= 0) {
   throw new Error("PORT must be a positive integer");
 }
 
-const app = Fastify({ logger: true });
 const redis = createRedisClient(redisUrl);
+const app = buildApp({
+  llm: new GeminiProvider(process.env.GEMINI_API_KEY ?? "", model),
+  cache: new ExactCache(redis, ttlSeconds),
+  redis,
+  model,
+});
 
 redis.on("error", (error: unknown) => {
   app.log.error({ err: error }, "Redis client error");
-});
-
-async function redisStatus(): Promise<"ok" | "error"> {
-  try {
-    return (await pingRedis(redis)) ? "ok" : "error";
-  } catch {
-    return "error";
-  }
-}
-
-const llm = new GeminiProvider(
-  process.env.GEMINI_API_KEY ?? "",
-  process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL,
-);
-registerChatRoute(app, llm);
-
-app.get("/health", async () => {
-  const redisState = await redisStatus();
-  return {
-    status: redisState === "ok" ? "ok" : "degraded",
-    service: PROJECT_NAME,
-    redis: redisState,
-  };
-});
-
-app.addHook("onClose", async () => {
-  if (redis.isOpen) {
-    await redis.quit();
-  }
 });
 
 try {
@@ -66,4 +47,15 @@ try {
 } catch (error) {
   app.log.error(error);
   process.exit(1);
+}
+
+function readTtlSeconds(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") {
+    return DEFAULT_EXACT_CACHE_TTL_SECONDS;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("CACHE_TTL_SECONDS must be a positive integer");
+  }
+  return parsed;
 }

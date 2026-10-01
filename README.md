@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 04 answers `POST /api/chat` with Gemini. There is no cache on that path yet. Embeddings and the chat UI are later phases. See `docs/requirements.md` and `docs/architecture.md`.
+Phase 05 stores an exact-match answer in Redis. The same question is a miss, then a hit. A hit does not call Gemini. Embeddings and the chat UI are later phases. See `docs/requirements.md` and `docs/architecture.md`.
 
 ## Prerequisites
 
@@ -40,8 +40,9 @@ pnpm dev:api
 | --- | --- |
 | `pnpm redis:up` | Start Redis Stack in Docker. |
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
-| `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `GET /health` includes Redis. `POST /api/chat` calls Gemini. |
+| `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact Redis cache, then Gemini on a miss. |
 | `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
+| `pnpm test` | Exact-cache checks: miss, store, hit, and no second model call. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |
@@ -58,4 +59,4 @@ packages/llm
 packages/evaluation
 ```
 
-`packages/cache` opens the Redis connection. Exact cache storage starts in Phase 05. `packages/llm` is the Gemini provider. `packages/embeddings` and `packages/evaluation` still compile only.
+`packages/cache` stores exact question-and-answer entries. Semantic search is later. `packages/llm` is the Gemini provider. `packages/embeddings` and `packages/evaluation` still compile only.
