@@ -20,6 +20,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local model downloads
+.cache/
+
 # test and tooling
 coverage/
 .vercel

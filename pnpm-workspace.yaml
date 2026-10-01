@@ -4,6 +4,7 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+  - onnxruntime-node
 
 ignoredBuiltDependencies:
   - sharp

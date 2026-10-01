@@ -14,6 +14,10 @@ Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model
 
 Identical trimmed questions are stored in Redis under a SHA-256 key that includes the provider and model. The first request is a miss: Gemini answers, then the answer is stored with a 24-hour TTL. The second request is a hit and does not call Gemini. A different string, a different model, or an expired entry is a miss. If Redis is unavailable, the request still calls Gemini.
 
+## 2026-10-01 — Local embeddings
+
+`EmbeddingService.embed` runs `all-MiniLM-L6-v2` locally through Transformers.js. The ONNX weights are `onnx-community/all-MiniLM-L6-v2-ONNX`, with mean pooling. Every vector has 384 dimensions and is L2-normalized so later cosine similarity is a dot product. Model files stay in `packages/embeddings/.cache` and are not committed. The chat route does not call this service yet.
+
 ## 2026-10-01 — Request metrics
 
 Live counters live in `RequestMetrics`, not in the cache. `GET /api/metrics` returns request, hit, miss, hit rate, LLM call, calls avoided, and average latency totals. The snapshot stores numbers only: no question text, answers, or API keys. A metrics failure does not fail the chat response. Counts reset when the API process restarts.
