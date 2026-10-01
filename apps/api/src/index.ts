@@ -1,7 +1,9 @@
 import "./load-env";
 import Fastify from "fastify";
 import { createRedisClient, pingRedis } from "@semantic-llm/cache";
+import { DEFAULT_GEMINI_MODEL, GeminiProvider } from "@semantic-llm/llm";
 import { PROJECT_NAME } from "@semantic-llm/shared";
+import { registerChatRoute } from "./chat";
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
@@ -25,6 +27,12 @@ async function redisStatus(): Promise<"ok" | "error"> {
     return "error";
   }
 }
+
+const llm = new GeminiProvider(
+  process.env.GEMINI_API_KEY ?? "",
+  process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL,
+);
+registerChatRoute(app, llm);
 
 app.get("/health", async () => {
   const redisState = await redisStatus();

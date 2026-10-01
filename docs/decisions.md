@@ -8,7 +8,7 @@ Use pnpm 10 workspaces. The version is pinned in the root `packageManager` field
 
 Gemini is the first concrete provider. The API will read `GEMINI_API_KEY` from the server environment. The key is never committed and never sent to the frontend.
 
-The Gemini client is not part of Phase 02. It lands in Phase 04 behind `LLMProvider`, so the cache does not depend on Gemini directly.
+Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model is `gemini-3.8-flash`, overridable with `GEMINI_MODEL`. `POST /api/chat` does not read or write the cache. The cache package does not import the Gemini SDK.
 
 ## 2026-10-01 — Local Redis
 

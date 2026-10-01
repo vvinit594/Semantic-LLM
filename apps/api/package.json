@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@semantic-llm/cache": "workspace:*",
+    "@semantic-llm/llm": "workspace:*",
     "@semantic-llm/shared": "workspace:*",
     "dotenv": "^18.0.5",
     "fastify": "^5.12.5"
