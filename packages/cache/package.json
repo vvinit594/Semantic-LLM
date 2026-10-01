@@ -7,13 +7,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --test-concurrency=1 src/vector-cache.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@semantic-llm/shared": "workspace:*",
     "redis": "^5.12.1"
   }
 }

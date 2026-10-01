@@ -78,6 +78,9 @@ importers:
 
   packages/cache:
     dependencies:
+      '@semantic-llm/shared':
+        specifier: workspace:*
+        version: link:../shared
       redis:
         specifier: ^5.12.1
         version: 5.12.1
@@ -85,6 +88,9 @@ importers:
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -94,6 +100,9 @@ importers:
       '@huggingface/transformers':
         specifier: ^4.3.0
         version: 4.3.0(@types/node@24.19.0)
+      '@semantic-llm/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^24.19.0

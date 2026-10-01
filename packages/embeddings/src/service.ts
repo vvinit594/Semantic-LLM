@@ -1,11 +1,12 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { env, pipeline, type Tensor } from "@huggingface/transformers";
+import { EMBEDDING_DIMENSIONS } from "@semantic-llm/shared";
 
 /** Sentence-transformers model. The ONNX build below is what Transformers.js can run locally. */
 export const EMBEDDING_MODEL = "all-MiniLM-L6-v2";
 export const EMBEDDING_MODEL_ID = "onnx-community/all-MiniLM-L6-v2-ONNX";
-export const EMBEDDING_DIMENSIONS = 384;
+export { EMBEDDING_DIMENSIONS };
 export const MAX_EMBEDDING_INPUT_LENGTH = 8_000;
 
 const cacheDir = resolve(dirname(fileURLToPath(import.meta.url)), "../.cache");
