@@ -14,6 +14,10 @@ Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model
 
 Identical trimmed questions are stored in Redis under a SHA-256 key that includes the provider and model. The first request is a miss: Gemini answers, then the answer is stored with a 24-hour TTL. The second request is a hit and does not call Gemini. A different string, a different model, or an expired entry is a miss. If Redis is unavailable, the request still calls Gemini.
 
+## 2026-10-01 — Request metrics
+
+Live counters live in `RequestMetrics`, not in the cache. `GET /api/metrics` returns request, hit, miss, hit rate, LLM call, calls avoided, and average latency totals. The snapshot stores numbers only: no question text, answers, or API keys. A metrics failure does not fail the chat response. Counts reset when the API process restarts.
+
 ## 2026-10-01 — Local Redis
 
 Redis Stack server `redis/redis-stack-server:7.4.0-v8`, started with Docker Compose and published on `localhost:6379`. This is the last Redis Stack patch and it includes RediSearch, which later phases use for vector search. The API uses the `redis` Node client from `packages/cache` and reads `REDIS_URL`. If Redis is down, the API still starts and `GET /health` reports `redis: "error"`.

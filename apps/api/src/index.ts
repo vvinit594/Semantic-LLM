@@ -7,6 +7,7 @@ import {
 } from "@semantic-llm/cache";
 import { DEFAULT_GEMINI_MODEL, GeminiProvider } from "@semantic-llm/llm";
 import { buildApp } from "./app";
+import { RequestMetrics } from "./metrics";
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
@@ -24,6 +25,7 @@ const app = buildApp({
   cache: new ExactCache(redis, ttlSeconds),
   redis,
   model,
+  metrics: new RequestMetrics(),
 });
 
 redis.on("error", (error: unknown) => {

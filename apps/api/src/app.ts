@@ -3,19 +3,24 @@ import { type ExactCache, pingRedis, type CacheRedisClient } from "@semantic-llm
 import type { LLMProvider } from "@semantic-llm/llm";
 import { PROJECT_NAME } from "@semantic-llm/shared";
 import { registerChatRoute } from "./chat";
+import { RequestMetrics, type MetricsRecorder } from "./metrics";
 
 export type AppDependencies = {
   llm: LLMProvider;
   cache: ExactCache;
   redis: CacheRedisClient;
   model: string;
+  metrics?: MetricsRecorder;
   logger?: boolean;
   closeRedis?: boolean;
 };
 
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
   const app = Fastify({ logger: dependencies.logger ?? true });
-  registerChatRoute(app, dependencies);
+  const metrics = dependencies.metrics ?? new RequestMetrics();
+  registerChatRoute(app, { ...dependencies, metrics });
+
+  app.get("/api/metrics", async () => metrics.snapshot());
 
   app.get("/health", async () => {
     let redisState: "ok" | "error" = "error";

@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 05 stores an exact-match answer in Redis. The same question is a miss, then a hit. A hit does not call Gemini. Embeddings and the chat UI are later phases. See `docs/requirements.md` and `docs/architecture.md`.
+Phase 06 records exact-cache metrics. `GET /api/metrics` reports requests, hits, misses, hit rate, LLM calls, calls avoided, and latency. Embeddings and the chat UI are later phases. See `docs/requirements.md` and `docs/architecture.md`.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ pnpm dev:api
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
 | `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact Redis cache, then Gemini on a miss. |
 | `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
-| `pnpm test` | Exact-cache checks: miss, store, hit, and no second model call. |
+| `pnpm test` | Exact-cache and metrics checks. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |
