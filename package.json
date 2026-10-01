@@ -8,6 +8,8 @@
   "scripts": {
     "dev:api": "pnpm --filter @semantic-llm/api dev",
     "dev:web": "pnpm --filter @semantic-llm/web dev",
+    "redis:up": "docker compose up -d",
+    "redis:down": "docker compose down",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm --filter @semantic-llm/web lint",
     "build:web": "pnpm --filter @semantic-llm/web build"

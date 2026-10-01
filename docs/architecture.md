@@ -57,6 +57,8 @@ These are the stack decisions for this project. Later changes go in `docs/decisi
 
 Package manager: pnpm 10 workspaces. See `docs/decisions.md`.
 
+Local Redis is `docker-compose.yml`: Redis Stack on port 6379. The API reads `REDIS_URL` and reports the connection from `GET /health`. Cache reads and writes start in later phases.
+
 The first LLM provider is Gemini. `POST /api/chat` in Phase 04 calls it through `LLMProvider`, so the cache never imports the Gemini SDK directly. The key is `GEMINI_API_KEY` on the server.
 
 ## Monorepo layout

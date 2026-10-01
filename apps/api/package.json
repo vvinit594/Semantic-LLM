@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@semantic-llm/cache": "workspace:*",
     "@semantic-llm/shared": "workspace:*",
+    "dotenv": "^18.0.5",
     "fastify": "^5.12.5"
   },
   "devDependencies": {
