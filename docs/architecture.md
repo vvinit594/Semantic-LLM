@@ -55,9 +55,9 @@ These are the stack decisions for this project. Later changes go in `docs/decisi
 | Local infra | Docker, Redis Stack, Node.js, Next.js | Redis must work locally before any AI code. |
 | Later deploy | Vercel + Redis Cloud + a Node host | Not part of the local MVP. |
 
-Package manager (pnpm or npm) is chosen in Phase 02, when the repo is initialized.
+Package manager: pnpm 10 workspaces. See `docs/decisions.md`.
 
-The first concrete LLM provider is chosen in Phase 04, when `POST /api/chat` is built. The interface exists so that choice does not leak into the cache.
+The first LLM provider is Gemini. `POST /api/chat` in Phase 04 calls it through `LLMProvider`, so the cache never imports the Gemini SDK directly. The key is `GEMINI_API_KEY` on the server.
 
 ## Monorepo layout
 
@@ -191,7 +191,7 @@ One phase at a time. Do not start the next phase until the current one has been 
 | 12 | Hit-rate optimization | Normalization and paraphrase behavior measured |
 | 13 | Cost optimization | HIT path has no LLM; cost inputs are explicit |
 | 14 | Evaluation dataset | `datasets/test-queries.json` with categories and adversarial cases |
-| 15 | Automated benchmarking | `npm run evaluate` writes a hit-rate, latency, and cost report |
+| 15 | Automated benchmarking | `pnpm evaluate` writes a hit-rate, latency, and cost report |
 | 16 | Frontend chat | Chat shows HIT vs MISS, similarity, and matched query |
 | 17 | Analytics dashboard | Requests, hit rate, calls avoided, latency, cost, cost ratio |
 | 18 | Cache explorer | Cached queries, scores, response, model, TTL, hit count |
@@ -205,4 +205,4 @@ Admin controls (clear cache, invalidate, threshold, TTL, top-K) land with the da
 
 ## Secrets
 
-`LLM_API_KEY` and `REDIS_URL` stay on the server. They are never sent to the frontend and never written into logs. `.env.example` lists names only.
+`GEMINI_API_KEY` and `REDIS_URL` stay on the server. They are never sent to the frontend and never written into logs. `.env.example` lists names only.
