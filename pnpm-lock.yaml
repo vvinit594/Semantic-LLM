@@ -19,6 +19,9 @@ importers:
       '@semantic-llm/embeddings':
         specifier: workspace:*
         version: link:../../packages/embeddings
+      '@semantic-llm/evaluation':
+        specifier: workspace:*
+        version: link:../../packages/evaluation
       '@semantic-llm/llm':
         specifier: workspace:*
         version: link:../../packages/llm

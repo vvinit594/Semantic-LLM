@@ -10,6 +10,18 @@ export class MissingGeminiApiKeyError extends Error {
   }
 }
 
+export type LlmCompletion = {
+  text: string;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+type GeminiUsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  thoughtsTokenCount?: number;
+};
+
 export class GeminiProvider implements LLMProvider {
   readonly name = "gemini";
   private client: GoogleGenAI | undefined;
@@ -20,6 +32,11 @@ export class GeminiProvider implements LLMProvider {
   ) {}
 
   async complete(prompt: string): Promise<string> {
+    const completion = await this.completeWithUsage(prompt);
+    return completion.text;
+  }
+
+  async completeWithUsage(prompt: string): Promise<LlmCompletion> {
     const response = await this.getClient().models.generateContent({
       model: this.model,
       contents: prompt,
@@ -28,7 +45,8 @@ export class GeminiProvider implements LLMProvider {
     if (!text) {
       throw new Error("Gemini returned an empty response");
     }
-    return text;
+    const usage = readUsage(response);
+    return { text, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens };
   }
 
   private getClient(): GoogleGenAI {
@@ -39,4 +57,19 @@ export class GeminiProvider implements LLMProvider {
     this.client ??= new GoogleGenAI({ apiKey });
     return this.client;
   }
+}
+
+function readUsage(response: { usageMetadata?: GeminiUsageMetadata }): {
+  inputTokens: number;
+  outputTokens: number;
+} {
+  const usage = response.usageMetadata;
+  return {
+    inputTokens: tokenCount(usage?.promptTokenCount),
+    outputTokens: tokenCount(usage?.candidatesTokenCount) + tokenCount(usage?.thoughtsTokenCount),
+  };
+}
+
+function tokenCount(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }

@@ -13,9 +13,29 @@ export type SemanticVectorStore = {
 };
 
 export type SemanticMatch =
-  | { decision: "hit"; answer: string; score: number; embedding: number[] }
-  | { decision: "miss"; embedding: number[]; reason: DecisionMissReason; guard?: SafetyGuard }
-  | { decision: "unavailable"; embedding?: number[]; reason: unknown };
+  | {
+      decision: "hit";
+      answer: string;
+      score: number;
+      embedding: number[];
+      embeddingMs: number;
+      redisMs: number;
+    }
+  | {
+      decision: "miss";
+      embedding: number[];
+      reason: DecisionMissReason;
+      guard?: SafetyGuard;
+      embeddingMs: number;
+      redisMs: number;
+    }
+  | {
+      decision: "unavailable";
+      embedding?: number[];
+      reason: unknown;
+      embeddingMs: number;
+      redisMs: number;
+    };
 
 export async function findSimilarAnswer(options: {
   query: string;
@@ -29,18 +49,22 @@ export async function findSimilarAnswer(options: {
   now?: Date;
 }): Promise<SemanticMatch> {
   let embedding: number[];
+  const embedStarted = performance.now();
   try {
     embedding = await options.embeddings.embed(embeddingText(options.query));
   } catch (error) {
-    return { decision: "unavailable", reason: error };
+    return { decision: "unavailable", reason: error, embeddingMs: elapsedMs(embedStarted), redisMs: 0 };
   }
+  const embeddingMs = elapsedMs(embedStarted);
 
   let candidates: VectorCandidate[];
+  const searchStarted = performance.now();
   try {
     candidates = await options.vectors.search(embedding, options.topK);
   } catch (error) {
-    return { decision: "unavailable", embedding, reason: error };
+    return { decision: "unavailable", embedding, reason: error, embeddingMs, redisMs: elapsedMs(searchStarted) };
   }
+  const redisMs = elapsedMs(searchStarted);
 
   const decision = decideCache(
     {
@@ -68,12 +92,21 @@ export async function findSimilarAnswer(options: {
       answer: decision.response,
       score: decision.score,
       embedding,
+      embeddingMs,
+      redisMs,
     };
   }
   return {
     decision: "miss",
     embedding,
     reason: decision.reason,
+    embeddingMs,
+    redisMs,
     ...(decision.reason === "guard" ? { guard: decision.guard } : {}),
   };
+}
+
+function elapsedMs(started: number): number {
+  const value = performance.now() - started;
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }

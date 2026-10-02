@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/report.test.ts src/hit-rate.live.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/cost.test.ts src/report.test.ts src/hit-rate.live.test.ts"
   },
   "dependencies": {
     "@semantic-llm/decision": "workspace:*",

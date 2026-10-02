@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 12 normalizes case, spacing, and punctuation before the cache lookup, and records hit rate, false hits, and false misses for the candidate thresholds. Safety guards are unchanged. The chat UI is a later phase. See `docs/hit-rate.md`.
+Phase 13 prices a cache hit from measured local embedding and Redis time, and prices an LLM request from Gemini token usage. A hit does not call Gemini or a paid embedding API. The slower measured ratio on 2026-10-02 was 384. See `docs/cost.md`.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ pnpm dev:api
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
 | `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact cache, then semantic search, then Gemini on a miss. |
 | `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
-| `pnpm test` | Normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
+| `pnpm test` | Cost quotes, normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |
@@ -61,4 +61,4 @@ packages/llm
 packages/evaluation
 ```
 
-`packages/query` normalizes case, spacing, and punctuation without rewriting the question. `packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. `packages/decision` decides HIT or MISS from similarity, metadata, freshness, and safety guards. `packages/evaluation` measures a small hit-rate probe. The full benchmark command is a later phase. `packages/llm` is the Gemini provider.
+`packages/query` normalizes case, spacing, and punctuation without rewriting the question. `packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. `packages/decision` decides HIT or MISS from similarity, metadata, freshness, and safety guards. `packages/evaluation` measures a small hit-rate probe and prices a cache hit against an LLM request. The full benchmark command is a later phase. `packages/llm` is the Gemini provider.

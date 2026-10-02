@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { ExactCache } from "@semantic-llm/cache";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
 import { isTimeSensitive } from "@semantic-llm/decision";
-import { MissingGeminiApiKeyError, type LLMProvider } from "@semantic-llm/llm";
+import { MissingGeminiApiKeyError, type LlmCompletion, type LLMProvider } from "@semantic-llm/llm";
 import type { LatencySample, MetricsRecorder } from "./metrics";
 import {
   findSimilarAnswer,
@@ -43,6 +43,9 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
     const started = performance.now();
     const cacheModel = `${llm.name}:${model}`;
     let cacheMs = 0;
+    let embeddingMs = 0;
+    let redisMs = 0;
+    let embeddingCalls = 0;
 
     const bypassCache = isTimeSensitive(message);
     let semanticMatch: Awaited<ReturnType<typeof findSimilarAnswer>> | undefined;
@@ -57,7 +60,9 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       } catch (error) {
         request.log.error({ message: redactSecrets(error) }, "Exact cache read failed");
       } finally {
-        cacheMs += elapsedMs(readStarted);
+        const readMs = elapsedMs(readStarted);
+        cacheMs += readMs;
+        redisMs += readMs;
       }
 
       if (cachedAnswer) {
@@ -67,6 +72,11 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
           totalMs: elapsedMs(started),
           cacheMs,
           llmMs: 0,
+          embeddingMs: 0,
+          redisMs,
+          embeddingCalls: 0,
+          llmInputTokens: 0,
+          llmOutputTokens: 0,
         });
         request.log.info("Exact cache HIT");
         return { answer: cachedAnswer, cached: true };
@@ -85,6 +95,9 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
         scope: CACHE_SCOPE,
       });
       cacheMs += elapsedMs(semanticStarted);
+      embeddingMs += semanticMatch.embeddingMs;
+      redisMs += semanticMatch.redisMs;
+      embeddingCalls += 1;
 
       if (semanticMatch.decision === "hit") {
         recordMetric(metrics, request.log, {
@@ -93,6 +106,11 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
           totalMs: elapsedMs(started),
           cacheMs,
           llmMs: 0,
+          embeddingMs,
+          redisMs,
+          embeddingCalls,
+          llmInputTokens: 0,
+          llmOutputTokens: 0,
         });
         request.log.info({ score: semanticMatch.score }, "Semantic cache HIT");
         return { answer: semanticMatch.answer, cached: true };
@@ -107,7 +125,8 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
 
     const llmStarted = performance.now();
     try {
-      const answer = await llm.complete(message);
+      const completion = await completeRequest(llm, message);
+      const answer = completion.text;
       const llmMs = elapsedMs(llmStarted);
       const storeStarted = performance.now();
       if (!bypassCache) {
@@ -139,6 +158,11 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
         totalMs: elapsedMs(started),
         cacheMs,
         llmMs,
+        embeddingMs,
+        redisMs,
+        embeddingCalls,
+        llmInputTokens: completion.inputTokens,
+        llmOutputTokens: completion.outputTokens,
       });
       return { answer, cached: false };
     } catch (error) {
@@ -149,6 +173,11 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
         totalMs: elapsedMs(started),
         cacheMs,
         llmMs: llmCalled ? elapsedMs(llmStarted) : 0,
+        embeddingMs,
+        redisMs,
+        embeddingCalls,
+        llmInputTokens: 0,
+        llmOutputTokens: 0,
       });
       if (error instanceof MissingGeminiApiKeyError) {
         return reply.code(503).send({ error: "GEMINI_API_KEY is not set" });
@@ -187,6 +216,28 @@ function recordMetric(
   } catch (error) {
     log.error({ message: redactSecrets(error) }, "Metrics record failed");
   }
+}
+
+async function completeRequest(llm: LLMProvider, prompt: string): Promise<LlmCompletion> {
+  if (hasUsage(llm)) {
+    return llm.completeWithUsage(prompt);
+  }
+  const text = await llm.complete(prompt);
+  return {
+    text,
+    inputTokens: estimateTokens(prompt),
+    outputTokens: estimateTokens(text),
+  };
+}
+
+function hasUsage(
+  llm: LLMProvider,
+): llm is LLMProvider & { completeWithUsage(prompt: string): Promise<LlmCompletion> } {
+  return "completeWithUsage" in llm && typeof llm.completeWithUsage === "function";
+}
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
 }
 
 function elapsedMs(started: number): number {

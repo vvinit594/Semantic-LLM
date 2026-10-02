@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Cost of a cache hit
+
+A cache hit does not call the LLM and does not call a paid embedding API. An exact hit also skips the local embedding model. Cost inputs are explicit: embedding API price is $0, local CPU is priced at $0.05 per vCPU-hour, and Gemini 3.8 Flash uses the introductory list price of $0.75 / $3.75 per 1M tokens through 2026-12-31. The LLM bill is input and output tokens. Waiting on the API is not billed as local CPU. On 2026-10-02 a warm semantic hit cost $0.000000641 and one Gemini request cost $0.000246, a ratio of 384. A hotter run on the same day reached 3519. See `docs/cost.md`.
+
 ## 2026-10-01 — Package manager
 
 Use pnpm 10 workspaces. The version is pinned in the root `packageManager` field (`pnpm@10.20.0`).

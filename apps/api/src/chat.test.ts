@@ -21,6 +21,15 @@ import {
   unitEmbedding,
 } from "./test-vectors";
 
+class CountingEmbeddings extends HashEmbeddings {
+  calls = 0;
+
+  override async embed(text: string): Promise<number[]> {
+    this.calls += 1;
+    return super.embed(text);
+  }
+}
+
 class FakeLlm implements LLMProvider {
   readonly name = "fake";
   readonly calls: string[] = [];
@@ -86,7 +95,7 @@ after(async () => {
 test("an identical question misses, stores, then hits without another LLM call", async () => {
   const llm = new FakeLlm();
   const model = `test-${crypto.randomUUID()}`;
-  const embeddings = new HashEmbeddings();
+  const embeddings = new CountingEmbeddings();
   const vectors = new VectorCache(redis);
   const app = buildApp({
     llm,
@@ -123,6 +132,7 @@ test("an identical question misses, stores, then hits without another LLM call",
       cached: true,
     });
     assert.deepEqual(llm.calls, [message]);
+    assert.equal(embeddings.calls, 1);
   } finally {
     await removeStored(vectors, embeddings, model, [message]);
     await app.close();
