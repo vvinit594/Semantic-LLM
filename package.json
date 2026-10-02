@@ -12,6 +12,7 @@
     "redis:down": "docker compose down",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
+    "evaluate": "pnpm --filter @semantic-llm/evaluation evaluate",
     "lint": "pnpm --filter @semantic-llm/web lint",
     "build:web": "pnpm --filter @semantic-llm/web build"
   }

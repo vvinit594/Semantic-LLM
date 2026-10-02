@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Automated benchmark
+
+`pnpm evaluate` loads `datasets/test-queries.json`, embeds with local MiniLM, stores each cached question in Redis, and decides with `decideCache`. It writes `datasets/evaluation-results.json` and `docs/benchmark.md`. On 2026-10-02, at the production threshold 0.85, the 37 cases had a hit rate of 0.270, no false hits, and one false miss (`learning-paraphrase`, score 0.784). Thresholds 0.80 through 0.90 made the same decisions. The run does not change the production threshold. The LLM is not called. The measured cache-hit to LLM-request cost ratio was 326.
+
 ## 2026-10-02 — Evaluation dataset
 
 `datasets/test-queries.json` is the labeled set for cache quality. Each case is a cached question, a new question, an expected hit or miss, and a false-hit or false-miss risk. Categories cover paraphrases, normalization, unrelated questions, entity mismatches, number mismatches, time-sensitive queries, different intent on the same subject, and model, language, or scope mismatches. Validation checks those labels against the safety and metadata guards. It does not embed questions or choose a threshold. The benchmark command is a later phase.

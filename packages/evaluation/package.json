@@ -8,12 +8,15 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/cost.test.ts src/dataset.test.ts src/report.test.ts src/hit-rate.live.test.ts"
+    "evaluate": "tsx src/evaluate.ts",
+    "test": "tsx --test --test-concurrency=1 src/cost.test.ts src/dataset.test.ts src/benchmark.test.ts src/report.test.ts src/hit-rate.live.test.ts"
   },
   "dependencies": {
+    "@semantic-llm/cache": "workspace:*",
     "@semantic-llm/decision": "workspace:*",
     "@semantic-llm/embeddings": "workspace:*",
-    "@semantic-llm/query": "workspace:*"
+    "@semantic-llm/query": "workspace:*",
+    "dotenv": "^18.0.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

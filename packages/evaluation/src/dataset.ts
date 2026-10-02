@@ -64,6 +64,24 @@ export function datasetPath(): string {
   return resolve(import.meta.dirname, "../../../datasets/test-queries.json");
 }
 
+export function caseMetadata(item: EvaluationCase): {
+  requestModel: string;
+  requestLanguage: string;
+  requestScope: string;
+  cachedModel: string;
+  cachedLanguage: string;
+  cachedScope: string;
+} {
+  return {
+    requestModel: item.request?.model ?? DEFAULT_MODEL,
+    requestLanguage: item.request?.language ?? DEFAULT_LANGUAGE,
+    requestScope: item.request?.scope ?? DEFAULT_SCOPE,
+    cachedModel: item.cached?.model ?? DEFAULT_MODEL,
+    cachedLanguage: item.cached?.language ?? DEFAULT_LANGUAGE,
+    cachedScope: item.cached?.scope ?? DEFAULT_SCOPE,
+  };
+}
+
 export function loadDataset(path = datasetPath()): EvaluationDataset {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
   return validateDataset(parsed);

@@ -1,4 +1,4 @@
-/** Benchmark runner. The full `pnpm evaluate` report starts in Phase 15. */
+/** Benchmark runner. `pnpm evaluate` writes datasets/evaluation-results.json and docs/benchmark.md. */
 export const EVALUATION_PACKAGE = "@semantic-llm/evaluation";
 export { CANDIDATE_THRESHOLDS, HIT_RATE_PROBES } from "./probes";
 export type { HitRateProbe, ProbeExpectation, ProbeKind } from "./probes";
@@ -12,7 +12,7 @@ export {
   quoteCosts,
 } from "./cost";
 export type { CostQuote, CostRates, CostSample } from "./cost";
-export { DATASET_CATEGORIES, DatasetError, datasetPath, loadDataset, validateDataset } from "./dataset";
+export { DATASET_CATEGORIES, DatasetError, caseMetadata, datasetPath, loadDataset, validateDataset } from "./dataset";
 export type {
   CaseMetadata,
   DatasetCategory,
@@ -21,5 +21,21 @@ export type {
   EvaluationCase,
   EvaluationDataset,
 } from "./dataset";
+export {
+  PRODUCTION_THRESHOLD,
+  REPRESENTATIVE_LLM_OUTPUT_TOKENS,
+  buildBenchmarkReport,
+  decideLabeledCase,
+  estimateTokens,
+  formatBenchmarkReport,
+} from "./benchmark";
+export type {
+  BenchmarkReport,
+  CaseResult,
+  CategoryResult,
+  ScoredCase,
+  StoredCandidate,
+  ThresholdResult,
+} from "./benchmark";
 export { observePair, summarize, summarizeThresholds, wouldReuse } from "./report";
 export type { ProbeObservation, ThresholdRow } from "./report";

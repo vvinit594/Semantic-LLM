@@ -147,6 +147,9 @@ importers:
 
   packages/evaluation:
     dependencies:
+      '@semantic-llm/cache':
+        specifier: workspace:*
+        version: link:../cache
       '@semantic-llm/decision':
         specifier: workspace:*
         version: link:../decision
@@ -156,6 +159,9 @@ importers:
       '@semantic-llm/query':
         specifier: workspace:*
         version: link:../query
+      dotenv:
+        specifier: ^18.0.5
+        version: 18.0.5
     devDependencies:
       '@types/node':
         specifier: ^24.19.0
