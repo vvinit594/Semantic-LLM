@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "evaluate": "pnpm --filter @semantic-llm/evaluation evaluate",
+    "load": "pnpm --filter @semantic-llm/api load",
     "lint": "pnpm --filter @semantic-llm/web lint",
     "build:web": "pnpm --filter @semantic-llm/web build"
   }

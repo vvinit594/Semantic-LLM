@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Load testing
+
+`pnpm load` measures throughput, latency, error rate, hit rate, and LLM calls avoided against the existing chat API. The default safe mode starts a local server with a stub LLM, so Gemini is not called. Live mode can repeat warmed questions, and it refuses miss traffic unless `--allow-llm` is set and the planned call count is within `--max-llm-calls`. The production threshold, cache decisions, embeddings, and provider retries are unchanged. Safe-mode entries are deleted at the end. Live entries keep the normal TTL.
+
 ## 2026-10-02 — Testing and hardening
 
 The new tests cover exact-cache misses, Redis being unavailable, malformed chat bodies, a missing Gemini key, stale semantic entries, and language or scope mismatches. Gemini 429 and 503, the safety guards, and the existing hit and miss paths stay covered by the tests already in the packages. The pages read chat, metrics, benchmark, and cache bodies through the same checks they used before. Production thresholds, cache decisions, and provider retries are unchanged.
