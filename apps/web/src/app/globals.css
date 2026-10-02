@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+.answer-markdown :not(pre) > code {
+  border-radius: 0.25rem;
+  background: #e5e5e5;
+  padding: 0.125rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.answer-markdown pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+}

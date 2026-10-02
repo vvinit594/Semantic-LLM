@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { MarkdownAnswer } from "./markdown-answer";
 
 const MAX_MESSAGE_LENGTH = 8_000;
 
@@ -141,9 +142,9 @@ function Answer({ turn }: { turn: Turn }) {
   }
   const { reply } = turn;
   return (
-    <div className="rounded-md border border-neutral-200 bg-neutral-50 px-4 py-3">
+    <div className="min-w-0 rounded-md border border-neutral-200 bg-neutral-50 px-4 py-3">
       <p className="text-sm font-medium text-neutral-500">Answer</p>
-      <p className="mt-2 whitespace-pre-wrap text-base">{reply.answer}</p>
+      <MarkdownAnswer text={reply.answer} />
       <dl className="mt-3 flex flex-col gap-1 text-sm text-neutral-600">
         <div className="flex gap-2">
           <dt className="font-medium text-neutral-800">{reply.cached ? "HIT" : "MISS"}</dt>
