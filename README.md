@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 08 stores 384-dimension embeddings in Redis and can return the nearest records. It does not decide whether a neighbor is a safe cache hit. The chat UI is a later phase. See `docs/requirements.md` and `docs/architecture.md`.
+Phase 09 answers a paraphrase from the semantic cache when similarity is at least 0.85, and still calls Gemini for an unrelated question. Safety guards are a later phase. The chat UI is a later phase. See `docs/requirements.md` and `docs/architecture.md`.
 
 ## Prerequisites
 
@@ -40,9 +40,9 @@ pnpm dev:api
 | --- | --- |
 | `pnpm redis:up` | Start Redis Stack in Docker. |
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
-| `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact Redis cache, then Gemini on a miss. |
+| `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact cache, then semantic search, then Gemini on a miss. |
 | `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
-| `pnpm test` | Exact-cache, vector search, metrics, and local embedding checks. |
+| `pnpm test` | Exact-cache, semantic HIT/MISS, vector search, metrics, and local embedding checks. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |
@@ -59,4 +59,4 @@ packages/llm
 packages/evaluation
 ```
 
-`packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. Semantic hit decisions are later. `packages/llm` is the Gemini provider. `packages/evaluation` still compiles only.
+`packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. The API treats a neighbor as a hit when its similarity reaches the threshold. Safety guards are later. `packages/llm` is the Gemini provider. `packages/evaluation` still compiles only.

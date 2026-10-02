@@ -1,19 +1,33 @@
 import type { FastifyInstance } from "fastify";
 import type { ExactCache } from "@semantic-llm/cache";
+import type { EmbeddingService } from "@semantic-llm/embeddings";
 import { MissingGeminiApiKeyError, type LLMProvider } from "@semantic-llm/llm";
 import type { LatencySample, MetricsRecorder } from "./metrics";
+import {
+  findSimilarAnswer,
+  type SemanticVectorStore,
+} from "./semantic-cache";
 
 const MAX_MESSAGE_LENGTH = 8_000;
 
 export type ChatDependencies = {
   llm: LLMProvider;
   cache: ExactCache;
+  vectors: SemanticVectorStore;
+  embeddings: EmbeddingService;
   model: string;
+  ttlSeconds: number;
+  similarityThreshold: number;
+  topK: number;
   metrics: MetricsRecorder;
 };
 
 export function registerChatRoute(app: FastifyInstance, dependencies: ChatDependencies): void {
-  const { llm, cache, model, metrics } = dependencies;
+  const { llm, cache, vectors, embeddings, model, metrics, ttlSeconds, similarityThreshold, topK } =
+    dependencies;
+  assertThreshold(similarityThreshold);
+  assertTopK(topK);
+  assertTtl(ttlSeconds);
 
   app.post("/api/chat", async (request, reply) => {
     const message = readMessage(request.body);
@@ -50,6 +64,34 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
     }
 
     request.log.info("Exact cache MISS");
+    const semanticStarted = performance.now();
+    const match = await findSimilarAnswer({
+      query: message,
+      embeddings,
+      vectors,
+      topK,
+      threshold: similarityThreshold,
+    });
+    cacheMs += elapsedMs(semanticStarted);
+
+    if (match.decision === "hit") {
+      recordMetric(metrics, request.log, {
+        outcome: "hit",
+        llmCalled: false,
+        totalMs: elapsedMs(started),
+        cacheMs,
+        llmMs: 0,
+      });
+      request.log.info({ score: match.score }, "Semantic cache HIT");
+      return { answer: match.answer, cached: true };
+    }
+
+    if (match.decision === "unavailable") {
+      request.log.error({ message: redactSecrets(match.reason) }, "Semantic cache lookup failed");
+    } else {
+      request.log.info("Semantic cache MISS");
+    }
+
     const llmStarted = performance.now();
     try {
       const answer = await llm.complete(message);
@@ -59,9 +101,23 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
         await cache.set(message, cacheModel, answer);
       } catch (error) {
         request.log.error({ message: redactSecrets(error) }, "Exact cache store failed");
-      } finally {
-        cacheMs += elapsedMs(storeStarted);
       }
+      if (match.embedding) {
+        try {
+          await vectors.upsert({
+            query: message,
+            embedding: match.embedding,
+            response: answer,
+            model: cacheModel,
+            language: "und",
+            ttlSeconds,
+            metadata: { scope: "public" },
+          });
+        } catch (error) {
+          request.log.error({ message: redactSecrets(error) }, "Semantic cache store failed");
+        }
+      }
+      cacheMs += elapsedMs(storeStarted);
       recordMetric(metrics, request.log, {
         outcome: "miss",
         llmCalled: true,
@@ -86,6 +142,24 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       return reply.code(502).send({ error: "LLM request failed" });
     }
   });
+}
+
+function assertThreshold(threshold: number): void {
+  if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 1) {
+    throw new Error("similarity threshold must be greater than 0 and at most 1");
+  }
+}
+
+function assertTopK(topK: number): void {
+  if (!Number.isInteger(topK) || topK <= 0) {
+    throw new Error("topK must be a positive integer");
+  }
+}
+
+function assertTtl(ttlSeconds: number): void {
+  if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
+    throw new Error("ttlSeconds must be a positive integer");
+  }
 }
 
 function recordMetric(

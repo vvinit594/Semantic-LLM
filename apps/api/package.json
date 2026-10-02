@@ -7,10 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/chat.test.ts src/metrics.test.ts src/metrics.route.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/semantic-cache.test.ts src/chat.test.ts src/metrics.test.ts src/metrics.route.test.ts src/semantic-cache.live.test.ts"
   },
   "dependencies": {
     "@semantic-llm/cache": "workspace:*",
+    "@semantic-llm/embeddings": "workspace:*",
     "@semantic-llm/llm": "workspace:*",
     "@semantic-llm/shared": "workspace:*",
     "dotenv": "^18.0.5",

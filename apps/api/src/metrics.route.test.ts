@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { ExactCache, createRedisClient, exactCacheKey, type CacheRedisClient } from "@semantic-llm/cache";
+import { ExactCache, VectorCache, createRedisClient, exactCacheKey, type CacheRedisClient } from "@semantic-llm/cache";
 import type { LLMProvider } from "@semantic-llm/llm";
 import "./load-env";
 import { buildApp } from "./app";
 import { RequestMetrics, type LatencySample, type MetricsRecorder } from "./metrics";
+import { HashEmbeddings } from "./test-vectors";
 
 class FakeLlm implements LLMProvider {
   readonly name = "fake";
@@ -46,11 +47,16 @@ test("GET /api/metrics reports the miss and the following hit", async () => {
   const metrics = new RequestMetrics();
   const model = `metrics-${crypto.randomUUID()}`;
   const message = `metrics ${model}`;
+  const embeddings = new HashEmbeddings();
+  const vectors = new VectorCache(redis);
   const app = buildApp({
     llm,
     cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
     redis,
     model,
+    ttlSeconds: 60,
     metrics,
     logger: false,
     closeRedis: false,
@@ -92,6 +98,12 @@ test("GET /api/metrics reports the miss and the following hit", async () => {
     assert.equal(JSON.stringify(body).includes(message), false);
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
+    const candidates = await vectors.search(await embeddings.embed(message), 8);
+    for (const candidate of candidates) {
+      if (candidate.record.query === message) {
+        await vectors.delete(candidate.id);
+      }
+    }
     await app.close();
   }
 });
@@ -100,11 +112,16 @@ test("a metrics failure still returns the chat answer", async () => {
   const llm = new FakeLlm();
   const model = `metrics-fail-${crypto.randomUUID()}`;
   const message = `fallback ${model}`;
+  const embeddings = new HashEmbeddings();
+  const vectors = new VectorCache(redis);
   const app = buildApp({
     llm,
     cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
     redis,
     model,
+    ttlSeconds: 60,
     metrics: new ThrowingMetrics(),
     logger: false,
     closeRedis: false,
@@ -121,6 +138,12 @@ test("a metrics failure still returns the chat answer", async () => {
     assert.deepEqual(response.json(), { answer: `stored:${message}`, cached: false });
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
+    const candidates = await vectors.search(await embeddings.embed(message), 8);
+    for (const candidate of candidates) {
+      if (candidate.record.query === message) {
+        await vectors.delete(candidate.id);
+      }
+    }
     await app.close();
   }
 });

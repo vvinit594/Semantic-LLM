@@ -13,6 +13,9 @@ importers:
       '@semantic-llm/cache':
         specifier: workspace:*
         version: link:../../packages/cache
+      '@semantic-llm/embeddings':
+        specifier: workspace:*
+        version: link:../../packages/embeddings
       '@semantic-llm/llm':
         specifier: workspace:*
         version: link:../../packages/llm
