@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { MarkdownAnswer } from "./markdown-answer";
+import { SiteHeader } from "./site-header";
 
 const MAX_MESSAGE_LENGTH = 8_000;
 
@@ -64,14 +65,10 @@ export function Chat({ apiUrl }: { apiUrl: string }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 px-6 py-5">
-        <div className="mx-auto w-full max-w-2xl">
-          <h1 className="text-lg font-semibold tracking-tight">Semantic LLM Cache</h1>
-          <p className="mt-1 text-sm text-neutral-600">
-            Ask a question. An identical or similar question can reuse a cached answer.
-          </p>
-        </div>
-      </header>
+      <SiteHeader
+        current="chat"
+        description="Ask a question. An identical or similar question can reuse a cached answer."
+      />
 
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-6">
         {turns.length === 0 ? (

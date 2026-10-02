@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Analytics dashboard
+
+`/dashboard` reads `GET /api/metrics` and `GET /api/benchmark`. Live counts stay in `RequestMetrics` and still reset when the API process restarts. The benchmark view is the saved `datasets/evaluation-results.json` report, trimmed to summary fields. It does not rerun the benchmark and does not change the production threshold. Exact and semantic hits, miss reasons, hit and miss latency, and estimated savings are recorded from decisions the chat route already made.
+
 ## 2026-10-02 — Transient Gemini errors
 
 Gemini HTTP 429 and 503 are transient. `GeminiProvider` tries the request up to three times, waiting 200ms and then 400ms. A missing API key, an empty response, and any other status are not retried. After the retries are exhausted, chat returns 429 or 503 with a short retry message. Other LLM failures stay HTTP 502. A failed provider call does not write the cache.

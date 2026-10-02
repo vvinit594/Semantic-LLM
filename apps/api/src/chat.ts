@@ -8,7 +8,7 @@ import {
   type LlmCompletion,
   type LLMProvider,
 } from "@semantic-llm/llm";
-import type { LatencySample, MetricsRecorder } from "./metrics";
+import type { LatencySample, MetricsRecorder, MissReason, SafetyGuardName } from "./metrics";
 import {
   findSimilarAnswer,
   type SemanticVectorStore,
@@ -73,6 +73,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       if (cachedAnswer) {
         recordMetric(metrics, request.log, {
           outcome: "hit",
+          match: "exact",
           llmCalled: false,
           totalMs: elapsedMs(started),
           cacheMs,
@@ -113,6 +114,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       if (semanticMatch.decision === "hit") {
         recordMetric(metrics, request.log, {
           outcome: "hit",
+          match: "semantic",
           llmCalled: false,
           totalMs: elapsedMs(started),
           cacheMs,
@@ -171,6 +173,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       cacheMs += elapsedMs(storeStarted);
       recordMetric(metrics, request.log, {
         outcome: "miss",
+        ...cacheMissFields(bypassCache, semanticMatch),
         llmCalled: true,
         totalMs: elapsedMs(started),
         cacheMs,
@@ -186,6 +189,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       const llmCalled = !(error instanceof MissingGeminiApiKeyError);
       recordMetric(metrics, request.log, {
         outcome: "miss",
+        ...cacheMissFields(bypassCache, semanticMatch),
         llmCalled,
         totalMs: elapsedMs(started),
         cacheMs,
@@ -228,6 +232,25 @@ function assertTtl(ttlSeconds: number): void {
   if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
     throw new Error("ttlSeconds must be a positive integer");
   }
+}
+
+function cacheMissFields(
+  bypassCache: boolean,
+  semanticMatch: Awaited<ReturnType<typeof findSimilarAnswer>> | undefined,
+): { missReason: MissReason; guard?: SafetyGuardName } | { missReason?: MissReason } {
+  if (bypassCache) {
+    return { missReason: "time-sensitive" };
+  }
+  if (semanticMatch?.decision === "unavailable") {
+    return { missReason: "unavailable" };
+  }
+  if (semanticMatch?.decision === "miss") {
+    if (semanticMatch.reason === "guard" && semanticMatch.guard) {
+      return { missReason: "guard", guard: semanticMatch.guard };
+    }
+    return { missReason: semanticMatch.reason };
+  }
+  return {};
 }
 
 function recordMetric(

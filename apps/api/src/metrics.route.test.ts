@@ -92,6 +92,9 @@ test("GET /api/metrics reports the miss and the following hit", async () => {
     assert.equal(body.hitRate, 0.5);
     assert.equal(body.llmCalls, 1);
     assert.equal(body.llmCallsAvoided, 1);
+    assert.equal(body.exactHits, 1);
+    assert.equal(body.semanticHits, 0);
+    assert.equal(body.missReasons.reduce((sum: number, item: { count: number }) => sum + item.count, 0), 1);
     assert.equal(llm.calls.length, 1);
     assert.ok(body.averageLatencyMs.total >= 0);
     assert.ok(body.averageLatencyMs.cache >= 0);

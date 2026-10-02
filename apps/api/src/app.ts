@@ -1,8 +1,10 @@
+import { resolve } from "node:path";
 import Fastify, { type FastifyInstance } from "fastify";
 import { type ExactCache, pingRedis, type CacheRedisClient } from "@semantic-llm/cache";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
 import type { LLMProvider } from "@semantic-llm/llm";
 import { PROJECT_NAME } from "@semantic-llm/shared";
+import { BenchmarkReportError, BenchmarkReportMissingError, loadBenchmarkReport } from "./benchmark-report";
 import { registerChatRoute } from "./chat";
 import { RequestMetrics, type MetricsRecorder } from "./metrics";
 import {
@@ -22,6 +24,7 @@ export type AppDependencies = {
   similarityThreshold?: number;
   topK?: number;
   metrics?: MetricsRecorder;
+  benchmarkReportPath?: string;
   logger?: boolean;
   closeRedis?: boolean;
 };
@@ -57,6 +60,22 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   });
 
   app.get("/api/metrics", async () => metrics.snapshot());
+
+  const benchmarkReportPath =
+    dependencies.benchmarkReportPath ??
+    resolve(import.meta.dirname, "../../../datasets/evaluation-results.json");
+  app.get("/api/benchmark", async (request, reply) => {
+    try {
+      return await loadBenchmarkReport(benchmarkReportPath);
+    } catch (error) {
+      if (error instanceof BenchmarkReportMissingError) {
+        return reply.code(404).send({ error: error.message });
+      }
+      const message = error instanceof BenchmarkReportError ? error.message : "The benchmark report could not be read.";
+      request.log.error({ message }, "Benchmark report read failed");
+      return reply.code(500).send({ error: message });
+    }
+  });
 
   app.get("/health", async () => {
     let redisState: "ok" | "error" = "error";

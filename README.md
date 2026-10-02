@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 16 is the chat page. It calls `POST /api/chat` and shows the answer, HIT or MISS, similarity, and the matched query. The API key stays on the server.
+Phase 17 adds `/dashboard`. Chat still calls `POST /api/chat` and shows the answer, HIT or MISS, similarity, and the matched query. The dashboard reads live `GET /api/metrics` and the saved benchmark report. The API key stays on the server.
 
 ## Prerequisites
 
