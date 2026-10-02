@@ -34,7 +34,10 @@ export type AppDependencies = {
   benchmarkReportPath?: string;
   logger?: boolean;
   closeRedis?: boolean;
+  embeddingStatus?: () => EmbeddingReadiness;
 };
+
+export type EmbeddingReadiness = "loading" | "ok" | "error";
 
 const WEB_ORIGINS = new Set(["http://127.0.0.1:3000", "http://localhost:3000"]);
 
@@ -110,11 +113,15 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
     } catch {
       redisState = "error";
     }
-    return {
+    const body = {
       status: redisState === "ok" ? "ok" : "degraded",
       service: PROJECT_NAME,
       redis: redisState,
     };
+    if (!dependencies.embeddingStatus) {
+      return body;
+    }
+    return { ...body, embeddings: dependencies.embeddingStatus() };
   });
 
   app.addHook("onClose", async () => {

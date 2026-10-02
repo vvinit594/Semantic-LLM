@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 20 adds `pnpm load`, a safe-by-default load test for throughput, latency, and hit rate. Phase 19 adds tests for cache misses, provider failures, and the responses the pages already read. Chat still calls `POST /api/chat`. The dashboard reads live metrics and the saved benchmark. The API key stays on the server.
+Phase 21 prepares a container for the API and a standalone web build. The API keeps the local embedding model, Redis is external, and the Gemini key stays on the server. See `docs/deployment.md`. Chat still calls `POST /api/chat`. The API key stays on the server.
 
 ## Prerequisites
 
@@ -45,6 +45,7 @@ pnpm dev:api
 | `pnpm test` | Dataset validation, benchmark report checks, cost quotes, normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
 | `pnpm evaluate` | Run the labeled dataset and write the hit-rate, latency, and cost report. |
 | `pnpm load` | Load-test the API. Safe mode is the default and does not call Gemini. See `docs/load-testing.md`. |
+| `docker build -f deploy/api.Dockerfile` | Build the API image. It does not deploy. See `docs/deployment.md`. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |

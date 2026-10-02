@@ -1,0 +1,37 @@
+# Web and API only. Redis is an external Redis Stack service. Do not add a Redis container here.
+# Set GEMINI_API_KEY, REDIS_URL, WEB_ORIGIN, and NEXT_PUBLIC_API_URL in the shell.
+# Do not commit those values.
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/api.Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in the shell. Do not commit it.}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL to the managed Redis Stack URL.}
+      WEB_ORIGIN: ${WEB_ORIGIN:?Set WEB_ORIGIN to the public web origin.}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-86400}
+      SEMANTIC_SIMILARITY_THRESHOLD: ${SEMANTIC_SIMILARITY_THRESHOLD:-0.85}
+      SEMANTIC_TOP_K: ${SEMANTIC_TOP_K:-5}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to the public API origin.}
+    environment:
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped

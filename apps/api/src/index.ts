@@ -8,7 +8,7 @@ import {
 } from "@semantic-llm/cache";
 import { createLocalEmbeddingService } from "@semantic-llm/embeddings";
 import { DEFAULT_GEMINI_MODEL, GeminiProvider } from "@semantic-llm/llm";
-import { buildApp } from "./app";
+import { buildApp, type EmbeddingReadiness } from "./app";
 import { RequestMetrics } from "./metrics";
 import { DEFAULT_SEMANTIC_TOP_K, DEFAULT_SIMILARITY_THRESHOLD } from "./semantic-cache";
 
@@ -26,6 +26,7 @@ if (!Number.isInteger(port) || port <= 0) {
 
 const redis = createRedisClient(redisUrl);
 const embeddings = createLocalEmbeddingService();
+let embeddingStatus: EmbeddingReadiness = "loading";
 const app = buildApp({
   llm: new GeminiProvider(process.env.GEMINI_API_KEY ?? "", model),
   cache: new ExactCache(redis, ttlSeconds),
@@ -37,10 +38,11 @@ const app = buildApp({
   similarityThreshold,
   topK,
   metrics: new RequestMetrics(),
+  embeddingStatus: () => embeddingStatus,
 });
 
 redis.on("error", (error: unknown) => {
-  app.log.error({ err: error }, "Redis client error");
+  app.log.error({ message: publicMessage(error) }, "Redis client error");
 });
 
 try {
@@ -52,23 +54,57 @@ try {
     app.log.error("Redis connection FAILED");
   }
 } catch (error) {
-  app.log.error({ err: error }, "Redis connection FAILED");
+  app.log.error({ message: publicMessage(error) }, "Redis connection FAILED");
 }
 
-void embeddings.init().then(
-  () => {
-    app.log.info("Embedding model ready");
-  },
-  (error: unknown) => {
-    app.log.error({ err: error }, "Embedding model failed to load");
-  },
-);
+try {
+  await embeddings.init();
+  embeddingStatus = "ok";
+  app.log.info("Embedding model ready");
+} catch (error) {
+  embeddingStatus = "error";
+  app.log.error({ message: publicMessage(error) }, "Embedding model failed to load");
+}
+
+let shuttingDown = false;
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  app.log.info({ signal }, "Shutting down");
+  try {
+    await app.close();
+  } finally {
+    process.exit(0);
+  }
+}
+
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+process.once("SIGINT", () => {
+  void shutdown("SIGINT");
+});
 
 try {
   await app.listen({ port, host });
 } catch (error) {
-  app.log.error(error);
+  app.log.error({ message: publicMessage(error) }, "Server failed to start");
+  await app.close();
   process.exit(1);
+}
+
+function publicMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "request failed";
+  let text = message;
+  for (const name of ["GEMINI_API_KEY", "REDIS_URL"]) {
+    const secret = process.env[name]?.trim() ?? "";
+    if (secret.length >= 8) {
+      text = text.replaceAll(secret, "[redacted]");
+    }
+  }
+  return text;
 }
 
 function readTtlSeconds(value: string | undefined): number {

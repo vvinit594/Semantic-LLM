@@ -1,6 +1,6 @@
 # Benchmark
 
-Generated 2026-10-02T10:18:10.815Z. Local embedding model `all-MiniLM-L6-v2`. 37 labeled cases from `datasets/test-queries.json`.
+Generated 2026-10-02T15:58:48.210Z. Local embedding model `all-MiniLM-L6-v2`. 37 labeled cases from `datasets/test-queries.json`.
 
 Production similarity threshold stays **0.85**. This run does not change it.
 
@@ -10,12 +10,12 @@ Each case stores one cached question in Redis, searches with the new question, a
 
 | Threshold | Hit rate | Correct hit rate | False hit rate | False miss rate | Miss rate | Avg hit ms | Avg miss ms |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.80 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 54.106 | 33.524 |
-| 0.85 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 54.106 | 33.524 |
-| 0.88 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 54.106 | 33.524 |
-| 0.90 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 54.106 | 33.524 |
-| 0.92 | 0.243 | 0.818 | 0.000 | 0.182 | 0.757 | 55.489 | 33.815 |
-| 0.95 | 0.216 | 0.727 | 0.000 | 0.273 | 0.784 | 56.680 | 34.234 |
+| 0.80 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 9.443 | 7.388 |
+| 0.85 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 9.443 | 7.388 |
+| 0.88 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 9.443 | 7.388 |
+| 0.90 | 0.270 | 0.909 | 0.000 | 0.091 | 0.730 | 9.443 | 7.388 |
+| 0.92 | 0.243 | 0.818 | 0.000 | 0.182 | 0.757 | 9.522 | 7.436 |
+| 0.95 | 0.216 | 0.727 | 0.000 | 0.273 | 0.784 | 9.395 | 7.543 |
 
 ## Categories at 0.85
 
@@ -34,10 +34,10 @@ Each case stores one cached question in Redis, searches with the new question, a
 
 | Measure | ms |
 | --- | --- |
-| Average embedding | 28.273 |
-| Average Redis search | 15.715 |
-| Average hit | 54.106 |
-| Average miss | 33.524 |
+| Average embedding | 3.192 |
+| Average Redis search | 5.892 |
+| Average hit | 9.443 |
+| Average miss | 7.388 |
 
 Hit and miss latency follow the request path. A time-sensitive question skips embedding and Redis, so its request time is 0. Other cases include the measured embedding and Redis search.
 
@@ -46,9 +46,9 @@ Hit and miss latency follow the request path. A time-sensitive question skips em
 | Cost | USD |
 | --- | --- |
 | Embedding API per call | 0 |
-| Average cache hit | 7.515e-7 |
+| Average cache hit | 1.312e-7 |
 | Average LLM request | 0.000245 |
-| Ratio (LLM / hit) | 326.466 |
+| Ratio (LLM / hit) | 1870.486 |
 
 Thresholds 0.80, 0.85, 0.88, 0.90 make the same decisions on this set. Production stays 0.85.
 

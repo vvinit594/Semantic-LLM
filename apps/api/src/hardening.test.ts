@@ -13,7 +13,7 @@ import { MissingGeminiApiKeyError, type LLMProvider } from "@semantic-llm/llm";
 import { embeddingText } from "@semantic-llm/query";
 import { EMBEDDING_DIMENSIONS } from "@semantic-llm/shared";
 import "./load-env";
-import { buildApp } from "./app";
+import { buildApp, type EmbeddingReadiness } from "./app";
 import { HashEmbeddings, unitEmbedding } from "./test-vectors";
 
 class FakeLlm implements LLMProvider {
@@ -275,6 +275,27 @@ test("a healthy Redis ping reports ok", async () => {
     assert.equal(health.statusCode, 200);
     assert.equal(health.json().status, "ok");
     assert.equal(health.json().redis, "ok");
+    assert.equal("embeddings" in health.json(), false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("health reports embedding readiness without changing the Redis status", async () => {
+  let readiness: EmbeddingReadiness = "loading";
+  const app = buildApp({
+    ...appOptions(new FakeLlm(), new ExactCache(redis, 60), new VectorCache(redis), new HashEmbeddings()),
+    embeddingStatus: () => readiness,
+  });
+  try {
+    const loading = await app.inject({ method: "GET", url: "/health" });
+    readiness = "error";
+    const failed = await app.inject({ method: "GET", url: "/health" });
+    assert.equal(loading.json().embeddings, "loading");
+    assert.equal(loading.json().status, "ok");
+    assert.equal(failed.json().embeddings, "error");
+    assert.equal(failed.json().redis, "ok");
+    assert.equal(failed.json().status, "ok");
   } finally {
     await app.close();
   }

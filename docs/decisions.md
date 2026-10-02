@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Deployment preparation
+
+The API runs as a long-lived Debian container because the local MiniLM embedding uses `onnxruntime-node`. The image prefetches that ONNX model. Redis stays an external Redis Stack service, and `GEMINI_API_KEY` stays on the API. The web image is a Next.js standalone build whose public API URL is set at build time. Nothing in this step changes hit decisions or the 0.85 threshold. The services are not deployed yet.
+
 ## 2026-10-02 — Load testing
 
 `pnpm load` measures throughput, latency, error rate, hit rate, and LLM calls avoided against the existing chat API. The default safe mode starts a local server with a stub LLM, so Gemini is not called. Live mode can repeat warmed questions, and it refuses miss traffic unless `--allow-llm` is set and the planned call count is within `--max-llm-calls`. The production threshold, cache decisions, embeddings, and provider retries are unchanged. Safe-mode entries are deleted at the end. Live entries keep the normal TTL.
