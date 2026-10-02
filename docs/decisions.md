@@ -14,6 +14,10 @@ Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model
 
 Identical trimmed questions are stored in Redis under a SHA-256 key that includes the provider and model. The first request is a miss: Gemini answers, then the answer is stored with a 24-hour TTL. The second request is a hit and does not call Gemini. A different string, a different model, or an expired entry is a miss. If Redis is unavailable, the request still calls Gemini.
 
+## 2026-10-02 — Cache decision engine
+
+HIT and MISS for a semantic neighbor are decided by `decideCache` in `@semantic-llm/decision`. The function is pure: it does not call Redis, the embedding model, or the LLM. It accepts a neighbor when the cosine similarity is at least the threshold, the model, language, and cache scope match, and `expiresAt` is still in the future. It then keeps looking down the ranked neighbors if a nearer one fails metadata or freshness. Entity, number, and time-sensitive guards are not applied. The chat route only supplies the request and stores the result.
+
 ## 2026-10-02 — Semantic cache
 
 `POST /api/chat` still checks the exact string cache first. On an exact miss it embeds the trimmed question locally and searches the Redis vector index. The nearest neighbor is a HIT when its cosine similarity is at least `SEMANTIC_SIMILARITY_THRESHOLD` (initially 0.85). Otherwise the request calls the LLM and stores both the exact entry and the vector record. The comparison is similarity only: model, language, scope, and the other safety guards are later phases. Language is stored as `und` until those checks exist. If embedding or Redis fails, the request still calls the LLM.

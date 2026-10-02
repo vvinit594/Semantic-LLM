@@ -13,6 +13,9 @@ importers:
       '@semantic-llm/cache':
         specifier: workspace:*
         version: link:../../packages/cache
+      '@semantic-llm/decision':
+        specifier: workspace:*
+        version: link:../../packages/decision
       '@semantic-llm/embeddings':
         specifier: workspace:*
         version: link:../../packages/embeddings
@@ -87,6 +90,18 @@ importers:
       redis:
         specifier: ^5.12.1
         version: 5.12.1
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/decision:
     devDependencies:
       '@types/node':
         specifier: ^24.19.0

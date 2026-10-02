@@ -5,6 +5,12 @@ import type { EmbeddingService } from "@semantic-llm/embeddings";
 import { DEFAULT_SIMILARITY_THRESHOLD, findSimilarAnswer, type SemanticVectorStore } from "./semantic-cache";
 
 const storedAnswer = "Paris is the capital of France.";
+const requestContext = {
+  model: "fake:test",
+  language: "und",
+  scope: "public",
+  now: new Date("2026-10-02T00:00:00.000Z"),
+};
 
 test("a candidate at the threshold is a hit and a lower score is a miss", async () => {
   const atThreshold = await findSimilarAnswer({
@@ -13,6 +19,7 @@ test("a candidate at the threshold is a hit and a lower score is a miss", async 
     vectors: new RankedStore(DEFAULT_SIMILARITY_THRESHOLD),
     topK: 5,
     threshold: DEFAULT_SIMILARITY_THRESHOLD,
+    ...requestContext,
   });
   const below = await findSimilarAnswer({
     query: "How do I boil pasta?",
@@ -20,6 +27,7 @@ test("a candidate at the threshold is a hit and a lower score is a miss", async 
     vectors: new RankedStore(DEFAULT_SIMILARITY_THRESHOLD - 0.01),
     topK: 5,
     threshold: DEFAULT_SIMILARITY_THRESHOLD,
+    ...requestContext,
   });
 
   assert.equal(atThreshold.decision, "hit");
@@ -40,6 +48,7 @@ test("an embedding failure skips matching and a search failure still keeps the v
     vectors: new RankedStore(1),
     topK: 5,
     threshold: DEFAULT_SIMILARITY_THRESHOLD,
+    ...requestContext,
   });
   const searchFailed = await findSimilarAnswer({
     query: "What is the capital of France?",
@@ -47,6 +56,7 @@ test("an embedding failure skips matching and a search failure still keeps the v
     vectors: new FailingStore(),
     topK: 5,
     threshold: DEFAULT_SIMILARITY_THRESHOLD,
+    ...requestContext,
   });
 
   assert.equal(embedFailed.decision, "unavailable");

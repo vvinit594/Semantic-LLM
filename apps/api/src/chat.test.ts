@@ -322,6 +322,51 @@ test("an unrelated question below the threshold misses", async () => {
   }
 });
 
+test("a similar entry from a different model misses", async () => {
+  const llm = new FakeLlm();
+  const embeddings = new HashEmbeddings();
+  const vectors = new VectorCache(redis);
+  const message = `model boundary ${crypto.randomUUID()}`;
+  const modelA = `model-a-${crypto.randomUUID()}`;
+  const modelB = `model-b-${crypto.randomUUID()}`;
+  const appA = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model: modelA,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+  const appB = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model: modelB,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const first = await appA.inject({ method: "POST", url: "/api/chat", payload: { message } });
+    const second = await appB.inject({ method: "POST", url: "/api/chat", payload: { message } });
+
+    assert.equal(first.json().cached, false);
+    assert.equal(second.json().cached, false);
+    assert.deepEqual(llm.calls, [message, message]);
+  } finally {
+    await removeStored(vectors, embeddings, modelA, [message]);
+    await removeStored(vectors, embeddings, modelB, [message]);
+    await appA.close();
+    await appB.close();
+  }
+});
+
 test("a vector search failure still returns the LLM answer", async () => {
   const llm = new FakeLlm();
   const model = `search-fail-${crypto.randomUUID()}`;

@@ -9,6 +9,8 @@ import {
 } from "./semantic-cache";
 
 const MAX_MESSAGE_LENGTH = 8_000;
+const CACHE_LANGUAGE = "und";
+const CACHE_SCOPE = "public";
 
 export type ChatDependencies = {
   llm: LLMProvider;
@@ -71,6 +73,9 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       vectors,
       topK,
       threshold: similarityThreshold,
+      model: cacheModel,
+      language: CACHE_LANGUAGE,
+      scope: CACHE_SCOPE,
     });
     cacheMs += elapsedMs(semanticStarted);
 
@@ -89,7 +94,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
     if (match.decision === "unavailable") {
       request.log.error({ message: redactSecrets(match.reason) }, "Semantic cache lookup failed");
     } else {
-      request.log.info("Semantic cache MISS");
+      request.log.info({ reason: match.reason }, "Semantic cache MISS");
     }
 
     const llmStarted = performance.now();
@@ -109,9 +114,9 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
             embedding: match.embedding,
             response: answer,
             model: cacheModel,
-            language: "und",
+            language: CACHE_LANGUAGE,
             ttlSeconds,
-            metadata: { scope: "public" },
+            metadata: { scope: CACHE_SCOPE },
           });
         } catch (error) {
           request.log.error({ message: redactSecrets(error) }, "Semantic cache store failed");

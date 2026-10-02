@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@semantic-llm/cache": "workspace:*",
+    "@semantic-llm/decision": "workspace:*",
     "@semantic-llm/embeddings": "workspace:*",
     "@semantic-llm/llm": "workspace:*",
     "@semantic-llm/shared": "workspace:*",

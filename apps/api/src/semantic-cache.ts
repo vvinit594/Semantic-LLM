@@ -1,4 +1,5 @@
 import type { VectorCacheInput, VectorCandidate } from "@semantic-llm/cache";
+import { decideCache, type DecisionMissReason } from "@semantic-llm/decision";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
 
 /** Starting candidate from the requirements list. Benchmarking chooses the measured value later. */
@@ -10,10 +11,9 @@ export type SemanticVectorStore = {
   upsert(input: VectorCacheInput): Promise<unknown>;
 };
 
-/** Similarity only. Metadata checks and safety guards are later phases. */
 export type SemanticMatch =
   | { decision: "hit"; answer: string; score: number; embedding: number[] }
-  | { decision: "miss"; embedding: number[] }
+  | { decision: "miss"; embedding: number[]; reason: DecisionMissReason }
   | { decision: "unavailable"; embedding?: number[]; reason: unknown };
 
 export async function findSimilarAnswer(options: {
@@ -22,6 +22,10 @@ export async function findSimilarAnswer(options: {
   vectors: SemanticVectorStore;
   topK: number;
   threshold: number;
+  model: string;
+  language: string;
+  scope: string;
+  now?: Date;
 }): Promise<SemanticMatch> {
   let embedding: number[];
   try {
@@ -37,14 +41,31 @@ export async function findSimilarAnswer(options: {
     return { decision: "unavailable", embedding, reason: error };
   }
 
-  const best = candidates[0];
-  if (best && best.score >= options.threshold) {
+  const decision = decideCache(
+    {
+      model: options.model,
+      language: options.language,
+      scope: options.scope,
+      threshold: options.threshold,
+      now: options.now ?? new Date(),
+    },
+    candidates.map((candidate) => ({
+      id: candidate.id,
+      score: candidate.score,
+      response: candidate.record.response,
+      model: candidate.record.model,
+      language: candidate.record.language,
+      scope: candidate.record.metadata.scope ?? "",
+      expiresAt: candidate.record.expiresAt,
+    })),
+  );
+  if (decision.decision === "hit") {
     return {
       decision: "hit",
-      answer: best.record.response,
-      score: best.score,
+      answer: decision.response,
+      score: decision.score,
       embedding,
     };
   }
-  return { decision: "miss", embedding };
+  return { decision: "miss", embedding, reason: decision.reason };
 }
