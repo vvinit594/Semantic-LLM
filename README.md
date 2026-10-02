@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 13 prices a cache hit from measured local embedding and Redis time, and prices an LLM request from Gemini token usage. A hit does not call Gemini or a paid embedding API. The slower measured ratio on 2026-10-02 was 384. See `docs/cost.md`.
+Phase 14 adds `datasets/test-queries.json`, a labeled set of paraphrases, unrelated questions, and adversarial cases. Validation checks those labels against the safety guards. The benchmark command is a later phase.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ pnpm dev:api
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
 | `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact cache, then semantic search, then Gemini on a miss. |
 | `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
-| `pnpm test` | Cost quotes, normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
+| `pnpm test` | Dataset validation, cost quotes, normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
 | `pnpm typecheck` | Typecheck every workspace package. |
 | `pnpm lint` | Lint the web app. |
 | `pnpm build:web` | Production build of the web app. |
@@ -59,6 +59,7 @@ packages/cache
 packages/decision
 packages/llm
 packages/evaluation
+datasets/          Labeled evaluation queries
 ```
 
-`packages/query` normalizes case, spacing, and punctuation without rewriting the question. `packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. `packages/decision` decides HIT or MISS from similarity, metadata, freshness, and safety guards. `packages/evaluation` measures a small hit-rate probe and prices a cache hit against an LLM request. The full benchmark command is a later phase. `packages/llm` is the Gemini provider.
+`packages/query` normalizes case, spacing, and punctuation without rewriting the question. `packages/embeddings` turns text into local 384-dimension vectors. `packages/cache` stores exact entries and vector records. `packages/decision` decides HIT or MISS from similarity, metadata, freshness, and safety guards. `packages/evaluation` loads `datasets/test-queries.json`, measures a small hit-rate probe, and prices a cache hit against an LLM request. The full benchmark command is a later phase. `packages/llm` is the Gemini provider.

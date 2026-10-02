@@ -9,7 +9,7 @@ export type HitRateProbe = {
   expect: ProbeExpectation;
 };
 
-/** Pairwise sample for normalization and paraphrase measurement. The full dataset is a later phase. */
+/** Pairwise sample used by the Phase 12 hit-rate check. The labeled dataset is datasets/test-queries.json. */
 export const HIT_RATE_PROBES: readonly HitRateProbe[] = [
   {
     id: "case",

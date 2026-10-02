@@ -12,5 +12,14 @@ export {
   quoteCosts,
 } from "./cost";
 export type { CostQuote, CostRates, CostSample } from "./cost";
+export { DATASET_CATEGORIES, DatasetError, datasetPath, loadDataset, validateDataset } from "./dataset";
+export type {
+  CaseMetadata,
+  DatasetCategory,
+  DatasetExpectation,
+  DatasetRisk,
+  EvaluationCase,
+  EvaluationDataset,
+} from "./dataset";
 export { observePair, summarize, summarizeThresholds, wouldReuse } from "./report";
 export type { ProbeObservation, ThresholdRow } from "./report";

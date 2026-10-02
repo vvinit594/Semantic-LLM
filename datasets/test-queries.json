@@ -1,0 +1,312 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "france-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "What is the capital of France?",
+      "query": "Which city is the capital of France?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "redis-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "What is Redis?",
+      "query": "Can you explain what Redis is?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "learning-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "What is machine learning?",
+      "query": "Can you explain machine learning?",
+      "expect": "hit",
+      "risk": "false-miss",
+      "note": "Same subject with different wording. Easy to miss if the threshold is high."
+    },
+    {
+      "id": "binary-search-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "How does binary search work?",
+      "query": "Explain binary search.",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "rain-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "What causes rain?",
+      "query": "Why does rain happen?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "france-president-paraphrase",
+      "category": "paraphrase",
+      "cachedQuery": "Who is the president of France?",
+      "query": "Which person is the president of France?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "case",
+      "category": "normalization",
+      "cachedQuery": "What is machine learning?",
+      "query": "what is machine learning?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "spacing-punctuation",
+      "category": "normalization",
+      "cachedQuery": "What is machine learning?",
+      "query": "  WHAT   is   machine learning???  ",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "plus-spacing",
+      "category": "normalization",
+      "cachedQuery": "What is 2+2?",
+      "query": "What is 2 + 2?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "curly-apostrophe",
+      "category": "normalization",
+      "cachedQuery": "What's the capital of France?",
+      "query": "What’s the capital of France?",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "surrounding-space",
+      "category": "normalization",
+      "cachedQuery": "What is Redis?",
+      "query": "  What is Redis?  ",
+      "expect": "hit",
+      "risk": "false-miss"
+    },
+    {
+      "id": "learning-pasta",
+      "category": "unrelated",
+      "cachedQuery": "What is machine learning?",
+      "query": "How do I boil pasta?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "hash-bread",
+      "category": "unrelated",
+      "cachedQuery": "What is a hash table?",
+      "query": "How do I bake bread?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "photosynthesis-tire",
+      "category": "unrelated",
+      "cachedQuery": "What is photosynthesis?",
+      "query": "How do I change a bicycle tire?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "gravity-knitting",
+      "category": "unrelated",
+      "cachedQuery": "What is gravity?",
+      "query": "How do I start knitting?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "india-china",
+      "category": "entity-mismatch",
+      "cachedQuery": "What is the capital of India?",
+      "query": "What is the capital of China?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "india-china-case",
+      "category": "entity-mismatch",
+      "cachedQuery": "What is the capital of India?",
+      "query": "what is the capital of china?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "note": "Lowercase still names a different country."
+    },
+    {
+      "id": "paris-london",
+      "category": "entity-mismatch",
+      "cachedQuery": "What is the population of Paris?",
+      "query": "What is the population of London?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "python-java",
+      "category": "entity-mismatch",
+      "cachedQuery": "How do I read a file in Python?",
+      "query": "How do I read a file in Java?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "html-css",
+      "category": "entity-mismatch",
+      "cachedQuery": "What is HTML?",
+      "query": "What is CSS?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "two-plus-three",
+      "category": "number-mismatch",
+      "cachedQuery": "What is 2+2?",
+      "query": "What is 2+3?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "percent-of",
+      "category": "number-mismatch",
+      "cachedQuery": "What is 10% of 50?",
+      "query": "What is 10% of 80?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "train-speed",
+      "category": "number-mismatch",
+      "cachedQuery": "A train travels 60 miles in 2 hours. What is its speed?",
+      "query": "A train travels 60 miles in 3 hours. What is its speed?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "square-of",
+      "category": "number-mismatch",
+      "cachedQuery": "What is the square of 9?",
+      "query": "What is the square of 8?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "latest-news",
+      "category": "time-sensitive",
+      "cachedQuery": "What is the latest news?",
+      "query": "What is the latest news?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "note": "A repeat is still time-sensitive and must miss."
+    },
+    {
+      "id": "current-weather",
+      "category": "time-sensitive",
+      "cachedQuery": "What is the weather?",
+      "query": "What is the current weather?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "gold-price",
+      "category": "time-sensitive",
+      "cachedQuery": "What is the price of gold?",
+      "query": "What is the price of gold?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "stock-now",
+      "category": "time-sensitive",
+      "cachedQuery": "What is the stock market doing now?",
+      "query": "What is the stock market doing now?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "news-today",
+      "category": "time-sensitive",
+      "cachedQuery": "What happened in the news today?",
+      "query": "What happened in the news today?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "france-population",
+      "category": "intent-mismatch",
+      "cachedQuery": "What is the capital of France?",
+      "query": "What is the population of France?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "note": "Same country, different question."
+    },
+    {
+      "id": "redis-install",
+      "category": "intent-mismatch",
+      "cachedQuery": "What is Redis?",
+      "query": "How do I install Redis?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "learning-deep-learning",
+      "category": "intent-mismatch",
+      "cachedQuery": "What is machine learning?",
+      "query": "What is deep learning?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "note": "Related terms that must not share an answer."
+    },
+    {
+      "id": "search-sort",
+      "category": "intent-mismatch",
+      "cachedQuery": "How does binary search work?",
+      "query": "How does bubble sort work?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "rain-snow",
+      "category": "intent-mismatch",
+      "cachedQuery": "What causes rain?",
+      "query": "What causes snow?",
+      "expect": "miss",
+      "risk": "false-hit"
+    },
+    {
+      "id": "model-mismatch",
+      "category": "metadata-mismatch",
+      "cachedQuery": "What is the capital of France?",
+      "query": "What is the capital of France?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "cached": { "model": "gemini:gemini-3.8-flash" },
+      "request": { "model": "gemini:other-model" }
+    },
+    {
+      "id": "language-mismatch",
+      "category": "metadata-mismatch",
+      "cachedQuery": "What is the capital of France?",
+      "query": "What is the capital of France?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "cached": { "language": "en" },
+      "request": { "language": "fr" }
+    },
+    {
+      "id": "scope-mismatch",
+      "category": "metadata-mismatch",
+      "cachedQuery": "What is the capital of France?",
+      "query": "What is the capital of France?",
+      "expect": "miss",
+      "risk": "false-hit",
+      "cached": { "scope": "public" },
+      "request": { "scope": "user" }
+    }
+  ]
+}
