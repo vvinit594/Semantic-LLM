@@ -130,6 +130,36 @@ test("GET /api/cache lists exact and semantic entries without the embedding", as
   }
 });
 
+test("GET /api/cache rejects an oversized query and skips corrupt exact entries", async () => {
+  const token = `corrupt-${crypto.randomUUID()}`;
+  const key = `exact:${token}`;
+  const app = buildApp({
+    llm: new FakeLlm(),
+    cache: new ExactCache(redis, 60),
+    vectors: new VectorCache(redis),
+    embeddings: new HashEmbeddings(),
+    redis,
+    model: "explorer",
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    await redis.set(key, "not-json", { EX: 60 });
+    const oversized = await app.inject({ method: "GET", url: `/api/cache?q=${"a".repeat(201)}` });
+    const listed = await app.inject({ method: "GET", url: `/api/cache?q=${token}` });
+
+    assert.equal(oversized.statusCode, 400);
+    assert.deepEqual(oversized.json(), { error: "q must be a string up to 200 characters" });
+    assert.equal(listed.statusCode, 200);
+    assert.equal(listed.json().total, 0);
+  } finally {
+    await redis.del(key);
+    await app.close();
+  }
+});
+
 function sample(type: CacheExplorerEntry["type"], query: string): CacheExplorerEntry {
   return {
     id: query,

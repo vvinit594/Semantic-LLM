@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/semantic-cache.test.ts src/chat.test.ts src/metrics.test.ts src/metrics.route.test.ts src/benchmark-report.test.ts src/cache-explorer.test.ts src/semantic-cache.live.test.ts src/cost.live.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/semantic-cache.test.ts src/chat.test.ts src/hardening.test.ts src/metrics.test.ts src/metrics.route.test.ts src/benchmark-report.test.ts src/cache-explorer.test.ts src/semantic-cache.live.test.ts src/cost.live.test.ts"
   },
   "dependencies": {
     "@semantic-llm/cache": "workspace:*",

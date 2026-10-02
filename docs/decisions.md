@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Testing and hardening
+
+The new tests cover exact-cache misses, Redis being unavailable, malformed chat bodies, a missing Gemini key, stale semantic entries, and language or scope mismatches. Gemini 429 and 503, the safety guards, and the existing hit and miss paths stay covered by the tests already in the packages. The pages read chat, metrics, benchmark, and cache bodies through the same checks they used before. Production thresholds, cache decisions, and provider retries are unchanged.
+
 ## 2026-10-02 — Cache explorer
 
 `/cache` reads `GET /api/cache`. The endpoint scans the existing exact and semantic Redis keys and returns the stored question, answer, model, language, scope, timestamps, and metadata. Exact entries do not store language or scope, so those fields stay empty. Embeddings and API keys are not returned. The explorer does not write, delete, or decide hits.

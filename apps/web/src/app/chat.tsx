@@ -1,20 +1,11 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { chatResult, type ChatReply } from "../api-responses";
 import { MarkdownAnswer } from "./markdown-answer";
 import { SiteHeader } from "./site-header";
 
 const MAX_MESSAGE_LENGTH = 8_000;
-
-type ChatMatch = "exact" | "semantic" | null;
-
-type ChatReply = {
-  answer: string;
-  cached: boolean;
-  match: ChatMatch;
-  similarity: number | null;
-  matchedQuery: string | null;
-};
 
 type Turn = {
   id: string;
@@ -189,33 +180,9 @@ async function requestAnswer(apiUrl: string, message: string): Promise<ChatReply
   }
 
   const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(readError(body) ?? "The request failed.");
+  const result = chatResult(response.ok, body);
+  if (!result.ok) {
+    throw new Error(result.error);
   }
-  if (!isChatReply(body)) {
-    throw new Error("The API returned an unexpected response.");
-  }
-  return body;
-}
-
-function readError(body: unknown): string | undefined {
-  if (typeof body !== "object" || body === null || !("error" in body)) {
-    return undefined;
-  }
-  const error = body.error;
-  return typeof error === "string" && error.trim().length > 0 ? error : undefined;
-}
-
-function isChatReply(body: unknown): body is ChatReply {
-  if (typeof body !== "object" || body === null) {
-    return false;
-  }
-  const reply = body as Partial<ChatReply>;
-  return (
-    typeof reply.answer === "string" &&
-    typeof reply.cached === "boolean" &&
-    (reply.match === "exact" || reply.match === "semantic" || reply.match === null) &&
-    (typeof reply.similarity === "number" || reply.similarity === null) &&
-    (typeof reply.matchedQuery === "string" || reply.matchedQuery === null)
-  );
+  return result.reply;
 }

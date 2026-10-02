@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/vector-cache.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/exact-cache.test.ts src/vector-cache.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

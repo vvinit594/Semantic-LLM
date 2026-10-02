@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 18 adds `/cache`, a read-only view of stored questions and answers. Chat still calls `POST /api/chat`. The dashboard reads live metrics and the saved benchmark. The API key stays on the server.
+Phase 19 adds tests for cache misses, provider failures, and the responses the pages already read. Phase 18 adds `/cache`, a read-only view of stored questions and answers. Chat still calls `POST /api/chat`. The dashboard reads live metrics and the saved benchmark. The API key stays on the server.
 
 ## Prerequisites
 

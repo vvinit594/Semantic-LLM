@@ -1,30 +1,11 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { cacheResult, type CacheEntry, type CachePage } from "../../api-responses";
 import { MarkdownAnswer } from "../markdown-answer";
 import { SiteHeader } from "../site-header";
 
 type CacheEntryType = "exact" | "semantic";
-
-type CacheEntry = {
-  id: string;
-  type: CacheEntryType;
-  query: string;
-  answer: string;
-  answerTruncated: boolean;
-  model: string | null;
-  language: string | null;
-  scope: string | null;
-  createdAt: string | null;
-  expiresAt: string | null;
-  metadata: Record<string, string>;
-};
-
-type CachePage = {
-  entries: CacheEntry[];
-  total: number;
-  truncated: boolean;
-};
 
 export function CacheExplorer({ apiUrl }: { apiUrl: string }) {
   const [draft, setDraft] = useState("");
@@ -257,54 +238,9 @@ async function requestEntries(
   try {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/cache${suffix}`, { signal });
     const body: unknown = await response.json().catch(() => null);
-    if (!response.ok || !isCachePage(body)) {
-      return { ok: false, error: readError(body) ?? "The cache request failed." };
-    }
-    return { ok: true, page: body };
+    return cacheResult(response.ok, body);
   } catch {
     return { ok: false, error: "The cache request failed." };
   }
 }
 
-function isCachePage(value: unknown): value is CachePage {
-  if (typeof value !== "object" || value === null || !("entries" in value)) {
-    return false;
-  }
-  const page = value as Partial<CachePage>;
-  return Array.isArray(page.entries) && page.entries.every(isCacheEntry) && typeof page.total === "number" && typeof page.truncated === "boolean";
-}
-
-function isCacheEntry(value: unknown): value is CacheEntry {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const entry = value as Partial<CacheEntry>;
-  return (
-    typeof entry.id === "string" &&
-    (entry.type === "exact" || entry.type === "semantic") &&
-    typeof entry.query === "string" &&
-    typeof entry.answer === "string" &&
-    typeof entry.answerTruncated === "boolean" &&
-    (typeof entry.model === "string" || entry.model === null) &&
-    (typeof entry.language === "string" || entry.language === null) &&
-    (typeof entry.scope === "string" || entry.scope === null) &&
-    (typeof entry.createdAt === "string" || entry.createdAt === null) &&
-    (typeof entry.expiresAt === "string" || entry.expiresAt === null) &&
-    isStringRecord(entry.metadata)
-  );
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  return Object.values(value).every((item) => typeof item === "string");
-}
-
-function readError(body: unknown): string | undefined {
-  if (typeof body !== "object" || body === null || !("error" in body)) {
-    return undefined;
-  }
-  const error = body.error;
-  return typeof error === "string" && error.trim().length > 0 ? error : undefined;
-}

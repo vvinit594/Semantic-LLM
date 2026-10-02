@@ -1,74 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { benchmarkResult, metricsResult, type BenchmarkDashboard, type MetricsSnapshot, type MissReasonCount } from "../../api-responses";
 import { SiteHeader } from "../site-header";
 import { CardGrid, MetricCard, Panel, Section } from "./cards";
 import { BarChart } from "./charts";
 import { formatCategory, formatCount, formatMs, formatPercent, formatRatio, formatUsd } from "./format";
-
-type MissReasonCount = {
-  reason: string;
-  guard?: string;
-  count: number;
-};
-
-type MetricsSnapshot = {
-  totalRequests: number;
-  cacheHits: number;
-  cacheMisses: number;
-  exactHits: number;
-  semanticHits: number;
-  hitRate: number;
-  llmCalls: number;
-  llmCallsAvoided: number;
-  averageLatencyMs: {
-    hit: number;
-    miss: number;
-    embedding: number;
-    redis: number;
-    llm: number;
-  };
-  missReasons: MissReasonCount[];
-  cost: {
-    averageCacheHitUsd: number;
-    averageLlmRequestUsd: number;
-    savingsUsd: number | null;
-    ratio: number | null;
-  };
-};
-
-type BenchmarkCategory = {
-  category: string;
-  cases: number;
-  hitRate: number;
-  falseHits: number;
-  falseMisses: number;
-};
-
-type BenchmarkThreshold = {
-  threshold: number;
-  hitRate: number;
-  correctHitRate: number;
-  falseHits: number;
-  falseMisses: number;
-};
-
-type BenchmarkDashboard = {
-  generatedAt: string;
-  cases: number;
-  embeddingModel: string;
-  productionThreshold: number;
-  productionThresholdChanged: boolean;
-  hitRate: number;
-  correctHitRate: number;
-  falseHits: number;
-  falseMisses: number;
-  categories: BenchmarkCategory[];
-  thresholds: BenchmarkThreshold[];
-  costRatio: number | null;
-  averageCacheHitUsd: number;
-  averageLlmRequestUsd: number;
-};
 
 export function Dashboard({ apiUrl }: { apiUrl: string }) {
   const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null);
@@ -433,10 +370,7 @@ async function requestMetrics(
   try {
     const response = await fetch(`${trimSlash(apiUrl)}/api/metrics`, { signal });
     const body: unknown = await response.json().catch(() => null);
-    if (!response.ok || !isMetrics(body)) {
-      return { ok: false, error: readError(body) ?? "The metrics request failed." };
-    }
-    return { ok: true, metrics: body };
+    return metricsResult(response.ok, body);
   } catch {
     return { ok: false, error: "The metrics request failed." };
   }
@@ -453,108 +387,9 @@ async function requestBenchmark(
   try {
     const response = await fetch(`${trimSlash(apiUrl)}/api/benchmark`, { signal });
     const body: unknown = await response.json().catch(() => null);
-    if (response.status === 404) {
-      return { ok: false, missing: true };
-    }
-    if (!response.ok || !isBenchmark(body)) {
-      return { ok: false, missing: false, error: readError(body) ?? "The benchmark request failed." };
-    }
-    return { ok: true, benchmark: body };
+    return benchmarkResult(response.status, body);
   } catch {
     return { ok: false, missing: false, error: "The benchmark request failed." };
   }
 }
 
-function readError(body: unknown): string | undefined {
-  if (typeof body !== "object" || body === null || !("error" in body)) {
-    return undefined;
-  }
-  const error = body.error;
-  return typeof error === "string" && error.trim().length > 0 ? error : undefined;
-}
-
-function isMetrics(body: unknown): body is MetricsSnapshot {
-  if (!isRecord(body) || !isRecord(body.averageLatencyMs) || !isRecord(body.cost) || !Array.isArray(body.missReasons)) {
-    return false;
-  }
-  return (
-    isNumber(body.totalRequests) &&
-    isNumber(body.cacheHits) &&
-    isNumber(body.cacheMisses) &&
-    isNumber(body.exactHits) &&
-    isNumber(body.semanticHits) &&
-    isNumber(body.hitRate) &&
-    isNumber(body.llmCalls) &&
-    isNumber(body.llmCallsAvoided) &&
-    isNumber(body.averageLatencyMs.hit) &&
-    isNumber(body.averageLatencyMs.miss) &&
-    isNumber(body.averageLatencyMs.embedding) &&
-    isNumber(body.averageLatencyMs.redis) &&
-    isNumber(body.averageLatencyMs.llm) &&
-    isNumber(body.cost.averageCacheHitUsd) &&
-    isNumber(body.cost.averageLlmRequestUsd) &&
-    isNullableNumber(body.cost.savingsUsd) &&
-    isNullableNumber(body.cost.ratio) &&
-    body.missReasons.every(isMissReason)
-  );
-}
-
-function isBenchmark(body: unknown): body is BenchmarkDashboard {
-  if (!isRecord(body) || !Array.isArray(body.categories) || !Array.isArray(body.thresholds)) {
-    return false;
-  }
-  return (
-    typeof body.generatedAt === "string" &&
-    isNumber(body.cases) &&
-    typeof body.embeddingModel === "string" &&
-    isNumber(body.productionThreshold) &&
-    typeof body.productionThresholdChanged === "boolean" &&
-    isNumber(body.hitRate) &&
-    isNumber(body.correctHitRate) &&
-    isNumber(body.falseHits) &&
-    isNumber(body.falseMisses) &&
-    isNullableNumber(body.costRatio) &&
-    isNumber(body.averageCacheHitUsd) &&
-    isNumber(body.averageLlmRequestUsd) &&
-    body.categories.every(isCategory) &&
-    body.thresholds.every(isThreshold)
-  );
-}
-
-function isMissReason(value: unknown): value is MissReasonCount {
-  return isRecord(value) && typeof value.reason === "string" && isNumber(value.count) && (value.guard === undefined || typeof value.guard === "string");
-}
-
-function isCategory(value: unknown): value is BenchmarkCategory {
-  return (
-    isRecord(value) &&
-    typeof value.category === "string" &&
-    isNumber(value.cases) &&
-    isNumber(value.hitRate) &&
-    isNumber(value.falseHits) &&
-    isNumber(value.falseMisses)
-  );
-}
-
-function isThreshold(value: unknown): value is BenchmarkThreshold {
-  return (
-    isRecord(value) &&
-    isNumber(value.threshold) &&
-    isNumber(value.hitRate) &&
-    isNumber(value.correctHitRate) &&
-    isNumber(value.falseHits) &&
-    isNumber(value.falseMisses)
-  );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function isNullableNumber(value: unknown): value is number | null {
-  return value === null || isNumber(value);
-}

@@ -35,6 +35,18 @@ test("a benchmark report with a missing field is rejected", () => {
   assert.throws(() => parseBenchmarkReport(broken), BenchmarkReportError);
 });
 
+test("GET /api/benchmark rejects a file that is not JSON", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "semantic-benchmark-"));
+  const path = join(directory, "evaluation-results.json");
+  await writeFile(path, "{");
+  const app = testApp(path);
+  apps.push(app);
+
+  const response = await app.inject({ method: "GET", url: "/api/benchmark" });
+  assert.equal(response.statusCode, 500);
+  assert.deepEqual(response.json(), { error: "The benchmark report is not valid JSON." });
+});
+
 test("GET /api/benchmark returns the saved report and a missing file is a 404", async () => {
   const directory = await mkdtemp(join(tmpdir(), "semantic-benchmark-"));
   const path = join(directory, "evaluation-results.json");
