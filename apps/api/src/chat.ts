@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ExactCache } from "@semantic-llm/cache";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
+import { isTimeSensitive } from "@semantic-llm/decision";
 import { MissingGeminiApiKeyError, type LLMProvider } from "@semantic-llm/llm";
 import type { LatencySample, MetricsRecorder } from "./metrics";
 import {
@@ -43,58 +44,65 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
     const cacheModel = `${llm.name}:${model}`;
     let cacheMs = 0;
 
-    const readStarted = performance.now();
-    let cachedAnswer: string | undefined;
-    try {
-      cachedAnswer = await cache.get(message, cacheModel);
-    } catch (error) {
-      request.log.error({ message: redactSecrets(error) }, "Exact cache read failed");
-    } finally {
-      cacheMs += elapsedMs(readStarted);
-    }
+    const bypassCache = isTimeSensitive(message);
+    let semanticMatch: Awaited<ReturnType<typeof findSimilarAnswer>> | undefined;
 
-    if (cachedAnswer) {
-      recordMetric(metrics, request.log, {
-        outcome: "hit",
-        llmCalled: false,
-        totalMs: elapsedMs(started),
-        cacheMs,
-        llmMs: 0,
-      });
-      request.log.info("Exact cache HIT");
-      return { answer: cachedAnswer, cached: true };
-    }
-
-    request.log.info("Exact cache MISS");
-    const semanticStarted = performance.now();
-    const match = await findSimilarAnswer({
-      query: message,
-      embeddings,
-      vectors,
-      topK,
-      threshold: similarityThreshold,
-      model: cacheModel,
-      language: CACHE_LANGUAGE,
-      scope: CACHE_SCOPE,
-    });
-    cacheMs += elapsedMs(semanticStarted);
-
-    if (match.decision === "hit") {
-      recordMetric(metrics, request.log, {
-        outcome: "hit",
-        llmCalled: false,
-        totalMs: elapsedMs(started),
-        cacheMs,
-        llmMs: 0,
-      });
-      request.log.info({ score: match.score }, "Semantic cache HIT");
-      return { answer: match.answer, cached: true };
-    }
-
-    if (match.decision === "unavailable") {
-      request.log.error({ message: redactSecrets(match.reason) }, "Semantic cache lookup failed");
+    if (bypassCache) {
+      request.log.info("Time-sensitive query bypassed the cache");
     } else {
-      request.log.info({ reason: match.reason }, "Semantic cache MISS");
+      const readStarted = performance.now();
+      let cachedAnswer: string | undefined;
+      try {
+        cachedAnswer = await cache.get(message, cacheModel);
+      } catch (error) {
+        request.log.error({ message: redactSecrets(error) }, "Exact cache read failed");
+      } finally {
+        cacheMs += elapsedMs(readStarted);
+      }
+
+      if (cachedAnswer) {
+        recordMetric(metrics, request.log, {
+          outcome: "hit",
+          llmCalled: false,
+          totalMs: elapsedMs(started),
+          cacheMs,
+          llmMs: 0,
+        });
+        request.log.info("Exact cache HIT");
+        return { answer: cachedAnswer, cached: true };
+      }
+
+      request.log.info("Exact cache MISS");
+      const semanticStarted = performance.now();
+      semanticMatch = await findSimilarAnswer({
+        query: message,
+        embeddings,
+        vectors,
+        topK,
+        threshold: similarityThreshold,
+        model: cacheModel,
+        language: CACHE_LANGUAGE,
+        scope: CACHE_SCOPE,
+      });
+      cacheMs += elapsedMs(semanticStarted);
+
+      if (semanticMatch.decision === "hit") {
+        recordMetric(metrics, request.log, {
+          outcome: "hit",
+          llmCalled: false,
+          totalMs: elapsedMs(started),
+          cacheMs,
+          llmMs: 0,
+        });
+        request.log.info({ score: semanticMatch.score }, "Semantic cache HIT");
+        return { answer: semanticMatch.answer, cached: true };
+      }
+
+      if (semanticMatch.decision === "unavailable") {
+        request.log.error({ message: redactSecrets(semanticMatch.reason) }, "Semantic cache lookup failed");
+      } else {
+        request.log.info({ reason: semanticMatch.reason, guard: semanticMatch.guard }, "Semantic cache MISS");
+      }
     }
 
     const llmStarted = performance.now();
@@ -102,24 +110,26 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       const answer = await llm.complete(message);
       const llmMs = elapsedMs(llmStarted);
       const storeStarted = performance.now();
-      try {
-        await cache.set(message, cacheModel, answer);
-      } catch (error) {
-        request.log.error({ message: redactSecrets(error) }, "Exact cache store failed");
-      }
-      if (match.embedding) {
+      if (!bypassCache) {
         try {
-          await vectors.upsert({
-            query: message,
-            embedding: match.embedding,
-            response: answer,
-            model: cacheModel,
-            language: CACHE_LANGUAGE,
-            ttlSeconds,
-            metadata: { scope: CACHE_SCOPE },
-          });
+          await cache.set(message, cacheModel, answer);
         } catch (error) {
-          request.log.error({ message: redactSecrets(error) }, "Semantic cache store failed");
+          request.log.error({ message: redactSecrets(error) }, "Exact cache store failed");
+        }
+        if (semanticMatch?.embedding) {
+          try {
+            await vectors.upsert({
+              query: message,
+              embedding: semanticMatch.embedding,
+              response: answer,
+              model: cacheModel,
+              language: CACHE_LANGUAGE,
+              ttlSeconds,
+              metadata: { scope: CACHE_SCOPE },
+            });
+          } catch (error) {
+            request.log.error({ message: redactSecrets(error) }, "Semantic cache store failed");
+          }
         }
       }
       cacheMs += elapsedMs(storeStarted);

@@ -1,5 +1,5 @@
 import type { VectorCacheInput, VectorCandidate } from "@semantic-llm/cache";
-import { decideCache, type DecisionMissReason } from "@semantic-llm/decision";
+import { decideCache, type DecisionMissReason, type SafetyGuard } from "@semantic-llm/decision";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
 
 /** Starting candidate from the requirements list. Benchmarking chooses the measured value later. */
@@ -13,7 +13,7 @@ export type SemanticVectorStore = {
 
 export type SemanticMatch =
   | { decision: "hit"; answer: string; score: number; embedding: number[] }
-  | { decision: "miss"; embedding: number[]; reason: DecisionMissReason }
+  | { decision: "miss"; embedding: number[]; reason: DecisionMissReason; guard?: SafetyGuard }
   | { decision: "unavailable"; embedding?: number[]; reason: unknown };
 
 export async function findSimilarAnswer(options: {
@@ -46,11 +46,13 @@ export async function findSimilarAnswer(options: {
       model: options.model,
       language: options.language,
       scope: options.scope,
+      query: options.query,
       threshold: options.threshold,
       now: options.now ?? new Date(),
     },
     candidates.map((candidate) => ({
       id: candidate.id,
+      query: candidate.record.query,
       score: candidate.score,
       response: candidate.record.response,
       model: candidate.record.model,
@@ -67,5 +69,10 @@ export async function findSimilarAnswer(options: {
       embedding,
     };
   }
-  return { decision: "miss", embedding, reason: decision.reason };
+  return {
+    decision: "miss",
+    embedding,
+    reason: decision.reason,
+    ...(decision.reason === "guard" ? { guard: decision.guard } : {}),
+  };
 }

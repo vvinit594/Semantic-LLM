@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 src/engine.test.ts"
+    "test": "tsx --test --test-concurrency=1 src/guards.test.ts src/engine.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.0",

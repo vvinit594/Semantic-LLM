@@ -14,6 +14,10 @@ Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model
 
 Identical trimmed questions are stored in Redis under a SHA-256 key that includes the provider and model. The first request is a miss: Gemini answers, then the answer is stored with a 24-hour TTL. The second request is a hit and does not call Gemini. A different string, a different model, or an expired entry is a miss. If Redis is unavailable, the request still calls Gemini.
 
+## 2026-10-02 — Safety guards
+
+Safety guards live in `@semantic-llm/decision` beside `decideCache`. After similarity, metadata, and freshness pass, a neighbor is still a MISS when the questions name different entities, contain different numbers, or either question is time-sensitive. Time-sensitive means the words today, latest, current, now, price, weather, news, or stock. Those questions skip cache reads and writes. Model, language, and scope stay dedicated metadata guards. The chat route calls the guards and does not contain their rules.
+
 ## 2026-10-02 — Cache decision engine
 
 HIT and MISS for a semantic neighbor are decided by `decideCache` in `@semantic-llm/decision`. The function is pure: it does not call Redis, the embedding model, or the LLM. It accepts a neighbor when the cosine similarity is at least the threshold, the model, language, and cache scope match, and `expiresAt` is still in the future. It then keeps looking down the ranked neighbors if a nearer one fails metadata or freshness. Entity, number, and time-sensitive guards are not applied. The chat route only supplies the request and stores the result.

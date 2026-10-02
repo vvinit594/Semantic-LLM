@@ -367,6 +367,119 @@ test("a similar entry from a different model misses", async () => {
   }
 });
 
+test("India and China do not reuse a cached answer", async () => {
+  const llm = new FakeLlm();
+  const model = `india-${crypto.randomUUID()}`;
+  const india = "What is the capital of India?";
+  const china = "What is the capital of China?";
+  const indiaVector = unitEmbedding(120);
+  const chinaVector = blendEmbeddings(indiaVector, unitEmbedding(121), 0.08);
+  const embeddings = new MappedEmbeddings(
+    new Map([
+      [india, indiaVector],
+      [china, chinaVector],
+    ]),
+  );
+  const vectors = new VectorCache(redis);
+  const app = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    await removeStored(vectors, embeddings, model, [india, china]);
+    assert.ok(dot(indiaVector, chinaVector) >= DEFAULT_SIMILARITY_THRESHOLD);
+    await app.inject({ method: "POST", url: "/api/chat", payload: { message: india } });
+    const second = await app.inject({ method: "POST", url: "/api/chat", payload: { message: china } });
+
+    assert.equal(second.json().cached, false);
+    assert.equal(second.json().answer, `stored:${china}`);
+    assert.deepEqual(llm.calls, [india, china]);
+  } finally {
+    await removeStored(vectors, embeddings, model, [india, china]);
+    await app.close();
+  }
+});
+
+test("2+2 and 2+3 do not reuse a cached answer", async () => {
+  const llm = new FakeLlm();
+  const model = `sum-${crypto.randomUUID()}`;
+  const twoTwo = "What is 2+2?";
+  const twoThree = "What is 2+3?";
+  const twoTwoVector = unitEmbedding(130);
+  const twoThreeVector = blendEmbeddings(twoTwoVector, unitEmbedding(131), 0.08);
+  const embeddings = new MappedEmbeddings(
+    new Map([
+      [twoTwo, twoTwoVector],
+      [twoThree, twoThreeVector],
+    ]),
+  );
+  const vectors = new VectorCache(redis);
+  const app = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    await removeStored(vectors, embeddings, model, [twoTwo, twoThree]);
+    assert.ok(dot(twoTwoVector, twoThreeVector) >= DEFAULT_SIMILARITY_THRESHOLD);
+    await app.inject({ method: "POST", url: "/api/chat", payload: { message: twoTwo } });
+    const second = await app.inject({ method: "POST", url: "/api/chat", payload: { message: twoThree } });
+
+    assert.equal(second.json().cached, false);
+    assert.equal(second.json().answer, `stored:${twoThree}`);
+    assert.deepEqual(llm.calls, [twoTwo, twoThree]);
+  } finally {
+    await removeStored(vectors, embeddings, model, [twoTwo, twoThree]);
+    await app.close();
+  }
+});
+
+test("a latest question does not hit the cache on a repeat", async () => {
+  const llm = new FakeLlm();
+  const model = `latest-${crypto.randomUUID()}`;
+  const message = "What is the latest news?";
+  const embeddings = new HashEmbeddings();
+  const vectors = new VectorCache(redis);
+  const app = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const first = await app.inject({ method: "POST", url: "/api/chat", payload: { message } });
+    const second = await app.inject({ method: "POST", url: "/api/chat", payload: { message } });
+
+    assert.equal(first.json().cached, false);
+    assert.equal(second.json().cached, false);
+    assert.deepEqual(llm.calls, [message, message]);
+  } finally {
+    await redis.del(exactCacheKey(message, `fake:${model}`));
+    await app.close();
+  }
+});
+
 test("a vector search failure still returns the LLM answer", async () => {
   const llm = new FakeLlm();
   const model = `search-fail-${crypto.randomUUID()}`;

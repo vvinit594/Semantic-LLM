@@ -10,6 +10,7 @@ import {
 const now = new Date("2026-10-02T12:00:00.000Z");
 
 const context: DecisionContext = {
+  query: "Which city is the capital of France?",
   model: "gemini:gemini-3.8-flash",
   language: "en",
   scope: "public",
@@ -95,15 +96,64 @@ test("a nearer incompatible candidate does not hide a compatible one", () => {
   });
 });
 
-test("the answer text is not inspected for safety guards", () => {
-  const decision = decideCache(context, [
-    candidate({ response: "The capital of China is Beijing.", score: 0.97 }),
-  ]);
+test("India and China cannot reuse an answer even when similarity is high", () => {
+  const decision = decideCache(
+    { ...context, query: "What is the capital of India?" },
+    [candidate({ query: "What is the capital of China?", score: 0.99, response: "Beijing." })],
+  );
 
-  assert.equal(decision.decision, "hit");
-  if (decision.decision === "hit") {
-    assert.equal(decision.response, "The capital of China is Beijing.");
-  }
+  assert.deepEqual(decision, { decision: "miss", reason: "guard", guard: "entity" });
+});
+
+test("2+2 and 2+3 cannot reuse an answer even when similarity is high", () => {
+  const decision = decideCache(
+    { ...context, query: "What is 2+2?" },
+    [candidate({ query: "What is 2+3?", score: 0.99, response: "5" })],
+  );
+
+  assert.deepEqual(decision, { decision: "miss", reason: "guard", guard: "number" });
+});
+
+test("a current or latest question bypasses a similar cached answer", () => {
+  const latest = decideCache(
+    { ...context, query: "What is the latest news?" },
+    [candidate({ query: "What is the latest news?", score: 1, response: "old headline" })],
+  );
+  const current = decideCache(
+    { ...context, query: "What is the weather?" },
+    [candidate({ query: "What is the current weather?", score: 0.96, response: "sunny" })],
+  );
+
+  assert.deepEqual(latest, { decision: "miss", reason: "guard", guard: "time" });
+  assert.deepEqual(current, { decision: "miss", reason: "guard", guard: "time" });
+});
+
+test("the same numbers and the same entity can still hit", () => {
+  const sameSum = decideCache(
+    { ...context, query: "What is 2 + 2?" },
+    [candidate({ query: "What is 2+2?", score: 0.96, response: "4" })],
+  );
+  const sameCountry = decideCache(context, [candidate({ score: 0.94 })]);
+
+  assert.equal(sameSum.decision, "hit");
+  assert.equal(sameCountry.decision, "hit");
+});
+
+test("a guarded neighbor does not hide a later safe candidate", () => {
+  const china = candidate({
+    id: "china",
+    query: "What is the capital of China?",
+    score: 0.99,
+    response: "Beijing.",
+  });
+  const france = candidate({ id: "france", score: 0.9 });
+
+  assert.deepEqual(decideCache({ ...context, query: "What is the capital of France?" }, [china, france]), {
+    decision: "hit",
+    id: "france",
+    response: "Paris is the capital of France.",
+    score: 0.9,
+  });
 });
 
 test("an invalid threshold or clock is rejected", () => {
@@ -114,6 +164,7 @@ test("an invalid threshold or clock is rejected", () => {
 function candidate(overrides: Partial<DecisionCandidate> = {}): DecisionCandidate {
   return {
     id: "paris",
+    query: "What is the capital of France?",
     score: 0.94,
     response: "Paris is the capital of France.",
     model: "gemini:gemini-3.8-flash",
