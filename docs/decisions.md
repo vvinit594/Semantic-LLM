@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Cache explorer
+
+`/cache` reads `GET /api/cache`. The endpoint scans the existing exact and semantic Redis keys and returns the stored question, answer, model, language, scope, timestamps, and metadata. Exact entries do not store language or scope, so those fields stay empty. Embeddings and API keys are not returned. The explorer does not write, delete, or decide hits.
+
 ## 2026-10-02 — Analytics dashboard
 
 `/dashboard` reads `GET /api/metrics` and `GET /api/benchmark`. Live counts stay in `RequestMetrics` and still reset when the API process restarts. The benchmark view is the saved `datasets/evaluation-results.json` report, trimmed to summary fields. It does not rerun the benchmark and does not change the production threshold. Exact and semantic hits, miss reasons, hit and miss latency, and estimated savings are recorded from decisions the chat route already made.

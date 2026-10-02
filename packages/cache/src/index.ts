@@ -1,5 +1,6 @@
 export {
   DEFAULT_EXACT_CACHE_TTL_SECONDS,
+  EXACT_KEY_PREFIX,
   ExactCache,
   exactCacheKey,
 } from "./exact";

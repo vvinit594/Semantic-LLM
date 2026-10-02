@@ -5,6 +5,13 @@ import type { EmbeddingService } from "@semantic-llm/embeddings";
 import type { LLMProvider } from "@semantic-llm/llm";
 import { PROJECT_NAME } from "@semantic-llm/shared";
 import { BenchmarkReportError, BenchmarkReportMissingError, loadBenchmarkReport } from "./benchmark-report";
+import {
+  CacheExplorerUnavailableError,
+  cacheSecrets,
+  filterCacheEntries,
+  loadCacheEntries,
+  readCacheQuery,
+} from "./cache-explorer";
 import { registerChatRoute } from "./chat";
 import { RequestMetrics, type MetricsRecorder } from "./metrics";
 import {
@@ -60,6 +67,23 @@ export function buildApp(dependencies: AppDependencies): FastifyInstance {
   });
 
   app.get("/api/metrics", async () => metrics.snapshot());
+
+  app.get("/api/cache", async (request, reply) => {
+    const parsed = readCacheQuery(request.query);
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: parsed.error });
+    }
+    try {
+      const entries = await loadCacheEntries(dependencies.redis, cacheSecrets());
+      return filterCacheEntries(entries, parsed.query);
+    } catch (error) {
+      if (error instanceof CacheExplorerUnavailableError) {
+        return reply.code(503).send({ error: error.message });
+      }
+      request.log.error("Cache explorer read failed");
+      return reply.code(503).send({ error: "The cache could not be read." });
+    }
+  });
 
   const benchmarkReportPath =
     dependencies.benchmarkReportPath ??
