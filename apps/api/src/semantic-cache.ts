@@ -1,6 +1,7 @@
 import type { VectorCacheInput, VectorCandidate } from "@semantic-llm/cache";
 import { decideCache, type DecisionMissReason, type SafetyGuard } from "@semantic-llm/decision";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
+import { embeddingText } from "@semantic-llm/query";
 
 /** Starting candidate from the requirements list. Benchmarking chooses the measured value later. */
 export const DEFAULT_SIMILARITY_THRESHOLD = 0.85;
@@ -29,7 +30,7 @@ export async function findSimilarAnswer(options: {
 }): Promise<SemanticMatch> {
   let embedding: number[];
   try {
-    embedding = await options.embeddings.embed(options.query);
+    embedding = await options.embeddings.embed(embeddingText(options.query));
   } catch (error) {
     return { decision: "unavailable", reason: error };
   }

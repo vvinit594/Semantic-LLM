@@ -5,6 +5,7 @@ import type { LLMProvider } from "@semantic-llm/llm";
 import "./load-env";
 import { buildApp } from "./app";
 import { RequestMetrics, type LatencySample, type MetricsRecorder } from "./metrics";
+import { embeddingText } from "@semantic-llm/query";
 import { HashEmbeddings } from "./test-vectors";
 
 class FakeLlm implements LLMProvider {
@@ -98,7 +99,7 @@ test("GET /api/metrics reports the miss and the following hit", async () => {
     assert.equal(JSON.stringify(body).includes(message), false);
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
-    const candidates = await vectors.search(await embeddings.embed(message), 8);
+    const candidates = await vectors.search(await embeddings.embed(embeddingText(message)), 8);
     for (const candidate of candidates) {
       if (candidate.record.query === message) {
         await vectors.delete(candidate.id);
@@ -138,7 +139,7 @@ test("a metrics failure still returns the chat answer", async () => {
     assert.deepEqual(response.json(), { answer: `stored:${message}`, cached: false });
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
-    const candidates = await vectors.search(await embeddings.embed(message), 8);
+    const candidates = await vectors.search(await embeddings.embed(embeddingText(message)), 8);
     for (const candidate of candidates) {
       if (candidate.record.query === message) {
         await vectors.delete(candidate.id);

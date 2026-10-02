@@ -14,6 +14,7 @@
     "@semantic-llm/decision": "workspace:*",
     "@semantic-llm/embeddings": "workspace:*",
     "@semantic-llm/llm": "workspace:*",
+    "@semantic-llm/query": "workspace:*",
     "@semantic-llm/shared": "workspace:*",
     "dotenv": "^18.0.5",
     "fastify": "^5.12.5"

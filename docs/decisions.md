@@ -14,6 +14,10 @@ Phase 04 calls Gemini through `LLMProvider` in `packages/llm`. The default model
 
 Identical trimmed questions are stored in Redis under a SHA-256 key that includes the provider and model. The first request is a miss: Gemini answers, then the answer is stored with a 24-hour TTL. The second request is a hit and does not call Gemini. A different string, a different model, or an expired entry is a miss. If Redis is unavailable, the request still calls Gemini.
 
+## 2026-10-02 — Hit-rate normalization
+
+Questions are normalized before the exact cache key and before the embedding: case, repeated whitespace, trailing punctuation, and spaces around `+`. Wording is not rewritten. Safety guards still see the original question, so India versus China and 2+2 versus 2+3 still miss. A pairwise probe of 14 questions is in `packages/evaluation`. On that set, thresholds 0.80 through 0.92 make the same decisions, false hits stay at 0, and 0.85 remains the production threshold. See `docs/hit-rate.md`.
+
 ## 2026-10-02 — Safety guards
 
 Safety guards live in `@semantic-llm/decision` beside `decideCache`. After similarity, metadata, and freshness pass, a neighbor is still a MISS when the questions name different entities, contain different numbers, or either question is time-sensitive. Time-sensitive means the words today, latest, current, now, price, weather, news, or stock. Those questions skip cache reads and writes. Model, language, and scope stay dedicated metadata guards. The chat route calls the guards and does not contain their rules.

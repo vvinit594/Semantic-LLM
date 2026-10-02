@@ -12,6 +12,7 @@ import type { LLMProvider } from "@semantic-llm/llm";
 import { EMBEDDING_DIMENSIONS } from "@semantic-llm/shared";
 import "./load-env";
 import { buildApp } from "./app";
+import { embeddingText } from "@semantic-llm/query";
 import { DEFAULT_SIMILARITY_THRESHOLD } from "./semantic-cache";
 import {
   HashEmbeddings,
@@ -39,11 +40,16 @@ class MappedEmbeddings implements EmbeddingService {
   async init(): Promise<void> {}
 
   async embed(text: string): Promise<number[]> {
-    const vector = this.vectors.get(text);
-    if (!vector) {
-      throw new Error(`no test vector for ${text}`);
+    const direct = this.vectors.get(text);
+    if (direct) {
+      return direct;
     }
-    return vector;
+    for (const [key, vector] of this.vectors) {
+      if (embeddingText(key) === text) {
+        return vector;
+      }
+    }
+    throw new Error(`no test vector for ${text}`);
   }
 }
 
@@ -143,7 +149,10 @@ test("a different question is another miss", async () => {
   const secondMessage = `beta ${model}`;
 
   try {
-    const similarity = dot(await embeddings.embed(firstMessage), await embeddings.embed(secondMessage));
+    const similarity = dot(
+      await embeddings.embed(embeddingText(firstMessage)),
+      await embeddings.embed(embeddingText(secondMessage)),
+    );
     assert.ok(similarity < DEFAULT_SIMILARITY_THRESHOLD);
 
     await app.inject({ method: "POST", url: "/api/chat", payload: { message: firstMessage } });
@@ -158,6 +167,38 @@ test("a different question is another miss", async () => {
     assert.deepEqual(llm.calls, [firstMessage, secondMessage]);
   } finally {
     await removeStored(vectors, embeddings, model, [firstMessage, secondMessage]);
+    await app.close();
+  }
+});
+
+test("a case and punctuation variant hits the same exact answer", async () => {
+  const llm = new FakeLlm();
+  const model = `case-${crypto.randomUUID()}`;
+  const embeddings = new HashEmbeddings();
+  const vectors = new VectorCache(redis);
+  const message = `What is cache ${model}?`;
+  const variant = `  WHAT   is cache ${model}???  `;
+  const app = buildApp({
+    llm,
+    cache: new ExactCache(redis, 60),
+    vectors,
+    embeddings,
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    await app.inject({ method: "POST", url: "/api/chat", payload: { message } });
+    const second = await app.inject({ method: "POST", url: "/api/chat", payload: { message: variant } });
+
+    assert.equal(second.json().cached, true);
+    assert.equal(second.json().answer, `stored:${message}`);
+    assert.deepEqual(llm.calls, [message]);
+  } finally {
+    await removeStored(vectors, embeddings, model, [message, variant.trim()]);
     await app.close();
   }
 });
@@ -559,7 +600,7 @@ async function removeStored(
 ): Promise<void> {
   for (const query of queries) {
     await redis.del(exactCacheKey(query, `fake:${model}`));
-    const candidates = await vectors.search(await embeddings.embed(query), 8);
+    const candidates = await vectors.search(await embeddings.embed(embeddingText(query)), 8);
     for (const candidate of candidates) {
       if (queries.includes(candidate.record.query)) {
         await vectors.delete(candidate.id);

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { normalizeQuery } from "@semantic-llm/query";
 import type { CacheRedisClient } from "./redis";
 
 export const DEFAULT_EXACT_CACHE_TTL_SECONDS = 60 * 60 * 24;
@@ -49,7 +50,7 @@ export class ExactCache {
 }
 
 export function exactCacheKey(query: string, model: string): string {
-  const digest = createHash("sha256").update(`${model}\0${query}`).digest("hex");
+  const digest = createHash("sha256").update(`${model}\0${normalizeQuery(query)}`).digest("hex");
   return `exact:${digest}`;
 }
 

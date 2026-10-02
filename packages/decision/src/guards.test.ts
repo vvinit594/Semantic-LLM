@@ -15,6 +15,14 @@ test("India and China conflict, while a France paraphrase does not", () => {
     true,
   );
   assert.equal(
+    entitiesConflict("what is the capital of india?", "What is the capital of China?"),
+    true,
+  );
+  assert.equal(
+    entitiesConflict("What is the capital of India?", "what is the capital of india?"),
+    false,
+  );
+  assert.equal(
     entitiesConflict("What is the capital of France?", "Which city is the capital of France?"),
     false,
   );

@@ -8,6 +8,7 @@ import {
   type CacheRedisClient,
 } from "@semantic-llm/cache";
 import { createLocalEmbeddingService, type EmbeddingService } from "@semantic-llm/embeddings";
+import { embeddingText } from "@semantic-llm/query";
 import type { LLMProvider } from "@semantic-llm/llm";
 import "./load-env";
 import { buildApp } from "./app";
@@ -96,7 +97,7 @@ async function removeQueries(
   storedQueries: string[],
 ): Promise<void> {
   for (const query of storedQueries) {
-    const candidates = await cache.search(await embeddingService.embed(query), 10);
+    const candidates = await cache.search(await embeddingService.embed(embeddingText(query)), 10);
     for (const candidate of candidates) {
       if (storedQueries.includes(candidate.record.query)) {
         await cache.delete(candidate.id);

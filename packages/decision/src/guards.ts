@@ -1,3 +1,5 @@
+import { normalizeQuery } from "@semantic-llm/query";
+
 export type SafetyGuard = "entity" | "number" | "time";
 export type MetadataGuard = "model" | "language" | "scope";
 
@@ -52,6 +54,9 @@ export function isTimeSensitive(text: string): boolean {
 }
 
 export function entitiesConflict(left: string, right: string): boolean {
+  if (normalizeQuery(left) === normalizeQuery(right)) {
+    return false;
+  }
   return !sameList(extractEntities(left), extractEntities(right));
 }
 

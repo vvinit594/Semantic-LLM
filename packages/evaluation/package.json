@@ -7,9 +7,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --test-concurrency=1 src/report.test.ts src/hit-rate.live.test.ts"
+  },
+  "dependencies": {
+    "@semantic-llm/decision": "workspace:*",
+    "@semantic-llm/embeddings": "workspace:*",
+    "@semantic-llm/query": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^24.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }
