@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-02 — Production benchmark
+
+The Phase 21 API and web images were run locally against Redis Stack. Health reported Redis and the embedding model ready. Exact hits, semantic hits, a three-question miss attempt, and mixed exact-plus-semantic traffic were measured on the container. Gemini returned 429 or 503 for the new questions, so miss traffic stayed at those failed calls and the semantic volume reused an answer already in Redis. The 0.85 threshold, cache decisions, embeddings, safety guards, and provider retries were not changed. The live cost ratio was not recomputed, because the failed calls recorded no tokens. See `docs/production-benchmark.md`.
+
 ## 2026-10-02 — Deployment preparation
 
 The API runs as a long-lived Debian container because the local MiniLM embedding uses `onnxruntime-node`. The image prefetches that ONNX model. Redis stays an external Redis Stack service, and `GEMINI_API_KEY` stays on the API. The web image is a Next.js standalone build whose public API URL is set at build time. Nothing in this step changes hit decisions or the 0.85 threshold. The services are not deployed yet.

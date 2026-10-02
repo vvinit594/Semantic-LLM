@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 21 prepares a container for the API and a standalone web build. The API keeps the local embedding model, Redis is external, and the Gemini key stays on the server. See `docs/deployment.md`. Chat still calls `POST /api/chat`. The API key stays on the server.
+Phase 22 runs the API and web containers locally and records latency, throughput, and hit rate in `docs/production-benchmark.md`. The API keeps the local embedding model, Redis is external, and the Gemini key stays on the server. See `docs/deployment.md`. Chat still calls `POST /api/chat`. The API key stays on the server.
 
 ## Prerequisites
 
