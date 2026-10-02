@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10-02 — Transient Gemini errors
+
+Gemini HTTP 429 and 503 are transient. `GeminiProvider` tries the request up to three times, waiting 200ms and then 400ms. A missing API key, an empty response, and any other status are not retried. After the retries are exhausted, chat returns 429 or 503 with a short retry message. Other LLM failures stay HTTP 502. A failed provider call does not write the cache.
+
+## 2026-10-02 — Frontend chat
+
+The Next.js page at `apps/web` sends the question to the existing `POST /api/chat` endpoint. The response still includes `answer` and `cached`, and now also includes `match`, `similarity`, and `matchedQuery`. An exact hit reports similarity 1 and the stored question. A semantic hit reports the Redis score and the cached question. A miss leaves those fields null. The browser may call `http://127.0.0.1:3000` and `http://localhost:3000`. `GEMINI_API_KEY` and `REDIS_URL` stay on the API.
+
 ## 2026-10-02 — Automated benchmark
 
 `pnpm evaluate` loads `datasets/test-queries.json`, embeds with local MiniLM, stores each cached question in Redis, and decides with `decideCache`. It writes `datasets/evaluation-results.json` and `docs/benchmark.md`. On 2026-10-02, at the production threshold 0.85, the 37 cases had a hit rate of 0.270, no false hits, and one false miss (`learning-paraphrase`, score 0.784). Thresholds 0.80 through 0.90 made the same decisions. The run does not change the production threshold. The LLM is not called. The measured cache-hit to LLM-request cost ratio was 326.

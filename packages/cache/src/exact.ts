@@ -21,7 +21,7 @@ export class ExactCache {
     }
   }
 
-  async get(query: string, model: string): Promise<string | undefined> {
+  async get(query: string, model: string): Promise<{ query: string; answer: string } | undefined> {
     if (!this.redis.isReady) {
       return undefined;
     }
@@ -29,8 +29,7 @@ export class ExactCache {
     if (!raw) {
       return undefined;
     }
-    const answer = readAnswer(raw);
-    return answer;
+    return readEntry(raw);
   }
 
   async set(query: string, model: string, answer: string): Promise<void> {
@@ -54,14 +53,18 @@ export function exactCacheKey(query: string, model: string): string {
   return `exact:${digest}`;
 }
 
-function readAnswer(raw: string): string | undefined {
+function readEntry(raw: string): { query: string; answer: string } | undefined {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null || !("answer" in parsed)) {
       return undefined;
     }
     const answer = parsed.answer;
-    return typeof answer === "string" && answer.length > 0 ? answer : undefined;
+    if (typeof answer !== "string" || answer.length === 0) {
+      return undefined;
+    }
+    const query = "query" in parsed && typeof parsed.query === "string" ? parsed.query : "";
+    return { query, answer };
   } catch {
     return undefined;
   }

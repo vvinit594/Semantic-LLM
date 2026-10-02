@@ -26,8 +26,23 @@ export type AppDependencies = {
   closeRedis?: boolean;
 };
 
+const WEB_ORIGINS = new Set(["http://127.0.0.1:3000", "http://localhost:3000"]);
+
 export function buildApp(dependencies: AppDependencies): FastifyInstance {
   const app = Fastify({ logger: dependencies.logger ?? true });
+  app.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    const extra = process.env.WEB_ORIGIN?.trim();
+    if (typeof origin === "string" && (WEB_ORIGINS.has(origin) || origin === extra)) {
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Vary", "Origin");
+      reply.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      reply.header("Access-Control-Allow-Headers", "Content-Type");
+    }
+    if (request.method === "OPTIONS") {
+      return reply.code(204).send();
+    }
+  });
   const metrics = dependencies.metrics ?? new RequestMetrics();
   registerChatRoute(app, {
     llm: dependencies.llm,

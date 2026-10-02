@@ -136,7 +136,13 @@ test("a metrics failure still returns the chat answer", async () => {
     });
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { answer: `stored:${message}`, cached: false });
+    assert.deepEqual(response.json(), {
+      answer: `stored:${message}`,
+      cached: false,
+      match: null,
+      similarity: null,
+      matchedQuery: null,
+    });
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
     const candidates = await vectors.search(await embeddings.embed(embeddingText(message)), 8);

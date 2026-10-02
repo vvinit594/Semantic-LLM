@@ -2,7 +2,7 @@
 
 Semantic caching middleware for LLM applications. A new question can reuse a previous answer when the meaning matches and the safety checks pass. A cache hit must stay far cheaper than an LLM call.
 
-Phase 15 adds `pnpm evaluate`. It runs the labeled dataset through local embeddings, Redis, and the decision engine, then writes `datasets/evaluation-results.json` and `docs/benchmark.md`. The production threshold stays 0.85.
+Phase 16 is the chat page. It calls `POST /api/chat` and shows the answer, HIT or MISS, similarity, and the matched query. The API key stays on the server.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ pnpm dev:api
 | `pnpm redis:up` | Start Redis Stack in Docker. |
 | `pnpm redis:down` | Stop Redis Stack and keep the data volume. |
 | `pnpm dev:api` | Fastify on `http://127.0.0.1:3001`. `POST /api/chat` uses the exact cache, then semantic search, then Gemini on a miss. |
-| `pnpm dev:web` | Next.js on `http://127.0.0.1:3000`. Placeholder home page only. |
+| `pnpm dev:web` | Next.js chat on `http://127.0.0.1:3000`. |
 | `pnpm test` | Dataset validation, benchmark report checks, cost quotes, normalization, hit-rate probes, safety-guard, decision-engine, cache, and embedding checks. |
 | `pnpm evaluate` | Run the labeled dataset and write the hit-rate, latency, and cost report. |
 | `pnpm typecheck` | Typecheck every workspace package. |

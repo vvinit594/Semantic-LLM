@@ -79,9 +79,26 @@ test("a real paraphrase hits above the threshold and an unrelated question misse
     const unrelated = await app.inject({ method: "POST", url: "/api/chat", payload: { message: pasta } });
 
     assert.equal(first.statusCode, 200);
-    assert.deepEqual(first.json(), { answer: `stored:${france}`, cached: false });
-    assert.deepEqual(paraphrase.json(), { answer: `stored:${france}`, cached: true });
-    assert.deepEqual(unrelated.json(), { answer: `stored:${pasta}`, cached: false });
+    assert.deepEqual(first.json(), {
+      answer: `stored:${france}`,
+      cached: false,
+      match: null,
+      similarity: null,
+      matchedQuery: null,
+    });
+    const hit = paraphrase.json() as { answer: string; cached: boolean; match: string; similarity: number; matchedQuery: string };
+    assert.equal(hit.answer, `stored:${france}`);
+    assert.equal(hit.cached, true);
+    assert.equal(hit.match, "semantic");
+    assert.equal(hit.matchedQuery, france);
+    assert.ok(hit.similarity >= DEFAULT_SIMILARITY_THRESHOLD);
+    assert.deepEqual(unrelated.json(), {
+      answer: `stored:${pasta}`,
+      cached: false,
+      match: null,
+      similarity: null,
+      matchedQuery: null,
+    });
     assert.deepEqual(llm.calls, [france, pasta]);
   } finally {
     for (const query of queries) {

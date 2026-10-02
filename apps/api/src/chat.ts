@@ -2,7 +2,12 @@ import type { FastifyInstance } from "fastify";
 import type { ExactCache } from "@semantic-llm/cache";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
 import { isTimeSensitive } from "@semantic-llm/decision";
-import { MissingGeminiApiKeyError, type LlmCompletion, type LLMProvider } from "@semantic-llm/llm";
+import {
+  MissingGeminiApiKeyError,
+  TransientGeminiError,
+  type LlmCompletion,
+  type LLMProvider,
+} from "@semantic-llm/llm";
 import type { LatencySample, MetricsRecorder } from "./metrics";
 import {
   findSimilarAnswer,
@@ -54,7 +59,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       request.log.info("Time-sensitive query bypassed the cache");
     } else {
       const readStarted = performance.now();
-      let cachedAnswer: string | undefined;
+      let cachedAnswer: { query: string; answer: string } | undefined;
       try {
         cachedAnswer = await cache.get(message, cacheModel);
       } catch (error) {
@@ -79,7 +84,13 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
           llmOutputTokens: 0,
         });
         request.log.info("Exact cache HIT");
-        return { answer: cachedAnswer, cached: true };
+        return {
+          answer: cachedAnswer.answer,
+          cached: true,
+          match: "exact",
+          similarity: 1,
+          matchedQuery: cachedAnswer.query || message,
+        };
       }
 
       request.log.info("Exact cache MISS");
@@ -113,7 +124,13 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
           llmOutputTokens: 0,
         });
         request.log.info({ score: semanticMatch.score }, "Semantic cache HIT");
-        return { answer: semanticMatch.answer, cached: true };
+        return {
+          answer: semanticMatch.answer,
+          cached: true,
+          match: "semantic",
+          similarity: semanticMatch.score,
+          matchedQuery: semanticMatch.matchedQuery,
+        };
       }
 
       if (semanticMatch.decision === "unavailable") {
@@ -164,7 +181,7 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
         llmInputTokens: completion.inputTokens,
         llmOutputTokens: completion.outputTokens,
       });
-      return { answer, cached: false };
+      return { answer, cached: false, match: null, similarity: null, matchedQuery: null };
     } catch (error) {
       const llmCalled = !(error instanceof MissingGeminiApiKeyError);
       recordMetric(metrics, request.log, {
@@ -181,6 +198,13 @@ export function registerChatRoute(app: FastifyInstance, dependencies: ChatDepend
       });
       if (error instanceof MissingGeminiApiKeyError) {
         return reply.code(503).send({ error: "GEMINI_API_KEY is not set" });
+      }
+      if (error instanceof TransientGeminiError) {
+        request.log.error(
+          { message: redactSecrets(error.cause ?? error), status: error.status },
+          "LLM provider is unavailable",
+        );
+        return reply.code(error.status).send({ error: error.message });
       }
       request.log.error({ message: redactSecrets(error) }, "LLM request failed");
       return reply.code(502).send({ error: "LLM request failed" });

@@ -17,6 +17,7 @@ export type SemanticMatch =
       decision: "hit";
       answer: string;
       score: number;
+      matchedQuery: string;
       embedding: number[];
       embeddingMs: number;
       redisMs: number;
@@ -87,10 +88,12 @@ export async function findSimilarAnswer(options: {
     })),
   );
   if (decision.decision === "hit") {
+    const matched = candidates.find((candidate) => candidate.id === decision.id);
     return {
       decision: "hit",
       answer: decision.response,
       score: decision.score,
+      matchedQuery: matched?.record.query ?? "",
       embedding,
       embeddingMs,
       redisMs,

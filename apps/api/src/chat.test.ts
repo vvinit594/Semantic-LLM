@@ -8,7 +8,7 @@ import {
   type CacheRedisClient,
 } from "@semantic-llm/cache";
 import type { EmbeddingService } from "@semantic-llm/embeddings";
-import type { LLMProvider } from "@semantic-llm/llm";
+import { TransientGeminiError, type LLMProvider } from "@semantic-llm/llm";
 import { EMBEDDING_DIMENSIONS } from "@semantic-llm/shared";
 import "./load-env";
 import { buildApp } from "./app";
@@ -37,6 +37,24 @@ class FakeLlm implements LLMProvider {
   async complete(prompt: string): Promise<string> {
     this.calls.push(prompt);
     return `stored:${prompt}`;
+  }
+}
+
+class UnavailableLlm implements LLMProvider {
+  readonly name = "fake";
+
+  constructor(private readonly status: 429 | 503) {}
+
+  async complete(): Promise<string> {
+    throw new TransientGeminiError(this.status);
+  }
+}
+
+class BrokenLlm implements LLMProvider {
+  readonly name = "fake";
+
+  async complete(): Promise<string> {
+    throw new Error("upstream rejected the prompt");
   }
 }
 
@@ -123,14 +141,8 @@ test("an identical question misses, stores, then hits without another LLM call",
     });
 
     assert.equal(first.statusCode, 200);
-    assert.deepEqual(first.json(), {
-      answer: "stored:What is machine learning?",
-      cached: false,
-    });
-    assert.deepEqual(second.json(), {
-      answer: "stored:What is machine learning?",
-      cached: true,
-    });
+    assert.deepEqual(first.json(), missBody("stored:What is machine learning?"));
+    assert.deepEqual(second.json(), exactBody("stored:What is machine learning?", message));
     assert.deepEqual(llm.calls, [message]);
     assert.equal(embeddings.calls, 1);
   } finally {
@@ -319,10 +331,18 @@ test("a paraphrase above the threshold hits without another LLM call", async () 
     });
 
     assert.equal(first.json().cached, false);
-    assert.deepEqual(second.json(), {
-      answer: "stored:What is the capital of France?",
-      cached: true,
-    });
+    const hit = second.json() as {
+      answer: string;
+      cached: boolean;
+      match: string;
+      similarity: number;
+      matchedQuery: string;
+    };
+    assert.equal(hit.answer, "stored:What is the capital of France?");
+    assert.equal(hit.cached, true);
+    assert.equal(hit.match, "semantic");
+    assert.equal(hit.matchedQuery, france);
+    assert.ok(hit.similarity >= DEFAULT_SIMILARITY_THRESHOLD);
     assert.deepEqual(llm.calls, [france]);
   } finally {
     await removeStored(vectors, embeddings, model, [france, franceParaphrase]);
@@ -562,7 +582,7 @@ test("a vector search failure still returns the LLM answer", async () => {
     });
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { answer: `stored:${message}`, cached: false });
+    assert.deepEqual(response.json(), missBody(`stored:${message}`));
     assert.deepEqual(llm.calls, [message]);
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
@@ -594,13 +614,145 @@ test("an embedding failure still returns the LLM answer", async () => {
     });
 
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { answer: `stored:${message}`, cached: false });
+    assert.deepEqual(response.json(), missBody(`stored:${message}`));
     assert.deepEqual(llm.calls, [message]);
   } finally {
     await redis.del(exactCacheKey(message, `fake:${model}`));
     await app.close();
   }
 });
+
+test("a transient Gemini 503 tells the user to retry and stores nothing", async () => {
+  const model = `busy-${crypto.randomUUID()}`;
+  const message = `transient ${model}`;
+  const cache = new ExactCache(redis, 60);
+  const app = buildApp({
+    llm: new UnavailableLlm(503),
+    cache,
+    vectors: new VectorCache(redis),
+    embeddings: new HashEmbeddings(),
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/chat",
+      payload: { message },
+    });
+
+    assert.equal(response.statusCode, 503);
+    assert.deepEqual(response.json(), {
+      error: "The model is temporarily unavailable. Please try again in a moment.",
+    });
+    assert.equal(await cache.get(message, `fake:${model}`), undefined);
+  } finally {
+    await app.close();
+  }
+});
+
+test("a transient Gemini 429 is returned as rate limiting", async () => {
+  const model = `limited-${crypto.randomUUID()}`;
+  const app = buildApp({
+    llm: new UnavailableLlm(429),
+    cache: new ExactCache(redis, 60),
+    vectors: new VectorCache(redis),
+    embeddings: new HashEmbeddings(),
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/chat",
+      payload: { message: `limited ${model}` },
+    });
+
+    assert.equal(response.statusCode, 429);
+    assert.deepEqual(response.json(), {
+      error: "The model is rate limited. Please try again in a moment.",
+    });
+  } finally {
+    await app.close();
+  }
+});
+
+test("a non-transient LLM failure stays a bad gateway", async () => {
+  const model = `broken-${crypto.randomUUID()}`;
+  const app = buildApp({
+    llm: new BrokenLlm(),
+    cache: new ExactCache(redis, 60),
+    vectors: new VectorCache(redis),
+    embeddings: new HashEmbeddings(),
+    redis,
+    model,
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/chat",
+      payload: { message: `broken ${model}` },
+    });
+
+    assert.equal(response.statusCode, 502);
+    assert.deepEqual(response.json(), { error: "LLM request failed" });
+  } finally {
+    await app.close();
+  }
+});
+
+test("the local web app can call the chat endpoint", async () => {
+  const app = buildApp({
+    llm: new FakeLlm(),
+    cache: new ExactCache(redis, 60),
+    vectors: new VectorCache(redis),
+    embeddings: new HashEmbeddings(),
+    redis,
+    model: "cors",
+    ttlSeconds: 60,
+    logger: false,
+    closeRedis: false,
+  });
+
+  try {
+    const allowed = await app.inject({
+      method: "OPTIONS",
+      url: "/api/chat",
+      headers: { origin: "http://127.0.0.1:3000" },
+    });
+    const blocked = await app.inject({
+      method: "OPTIONS",
+      url: "/api/chat",
+      headers: { origin: "http://evil.example" },
+    });
+
+    assert.equal(allowed.statusCode, 204);
+    assert.equal(allowed.headers["access-control-allow-origin"], "http://127.0.0.1:3000");
+    assert.equal(blocked.headers["access-control-allow-origin"], undefined);
+  } finally {
+    await app.close();
+  }
+});
+
+function missBody(answer: string) {
+  return { answer, cached: false, match: null, similarity: null, matchedQuery: null };
+}
+
+function exactBody(answer: string, matchedQuery: string) {
+  return { answer, cached: true, match: "exact", similarity: 1, matchedQuery };
+}
 
 async function removeStored(
   vectors: VectorCache,
