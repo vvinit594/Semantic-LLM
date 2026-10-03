@@ -2,8 +2,14 @@
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { chatResult, type ChatReply } from "../api-responses";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { FieldLabel, TextArea } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { MarkdownAnswer } from "./markdown-answer";
-import { SiteHeader } from "./site-header";
 
 const MAX_MESSAGE_LENGTH = 8_000;
 
@@ -55,21 +61,23 @@ export function Chat({ apiUrl }: { apiUrl: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader
-        current="chat"
-        description="Ask a question. An identical or similar question can reuse a cached answer."
-      />
-
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-6">
+    <div className="flex flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
+        <PageHeader
+          title="Chat"
+          subtitle="Ask a question. An identical or similar question can reuse a cached answer."
+        />
         {turns.length === 0 ? (
-          <p className="text-sm text-neutral-500">The conversation is empty.</p>
+          <EmptyState
+            title="No questions yet"
+            detail="Exact matches skip the model. Similar questions can reuse an answer when the safety checks pass."
+          />
         ) : (
           <ol className="flex flex-col gap-6">
             {turns.map((turn) => (
               <li key={turn.id} className="flex flex-col gap-3">
-                <p className="text-sm font-medium text-neutral-500">You</p>
-                <p className="whitespace-pre-wrap text-base">{turn.question}</p>
+                <p className="text-xs font-medium tracking-wide text-faint uppercase">You</p>
+                <p className="text-base leading-7 whitespace-pre-wrap text-ink">{turn.question}</p>
                 <Answer turn={turn} />
               </li>
             ))}
@@ -77,12 +85,10 @@ export function Chat({ apiUrl }: { apiUrl: string }) {
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="sticky bottom-0 border-t border-neutral-200 bg-white px-6 py-4">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
-          <label htmlFor="question" className="text-sm font-medium">
-            Question
-          </label>
-          <textarea
+      <form onSubmit={onSubmit} className="sticky bottom-0 border-t border-line bg-canvas px-4 py-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+          <FieldLabel htmlFor="question">Question</FieldLabel>
+          <TextArea
             id="question"
             name="question"
             rows={3}
@@ -90,19 +96,14 @@ export function Chat({ apiUrl }: { apiUrl: string }) {
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder="What is the capital of France?"
-            className="w-full resize-none rounded-md border border-neutral-300 px-3 py-2 text-base outline-none focus:border-neutral-900"
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-neutral-500" role="status">
+            <p className="text-sm text-secondary" role="status">
               {tooLong ? "Keep the question under 8000 characters." : "Enter sends. Shift+Enter adds a line."}
             </p>
-            <button
-              type="submit"
-              disabled={!trimmed || tooLong || sending}
-              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:bg-neutral-300"
-            >
+            <Button type="submit" disabled={!trimmed || tooLong || sending}>
               {sending ? "Sending…" : "Send"}
-            </button>
+            </Button>
           </div>
         </div>
       </form>
@@ -113,47 +114,46 @@ export function Chat({ apiUrl }: { apiUrl: string }) {
 function Answer({ turn }: { turn: Turn }) {
   if (turn.pending) {
     return (
-      <p className="text-sm text-neutral-500" role="status">
+      <p className="text-sm text-secondary" role="status">
         Checking the cache…
       </p>
     );
   }
   if (turn.error) {
-    return (
-      <p className="text-sm text-red-700" role="alert">
-        {turn.error}
-      </p>
-    );
+    return <ErrorState>{turn.error}</ErrorState>;
   }
   if (!turn.reply) {
     return null;
   }
   const { reply } = turn;
   return (
-    <div className="min-w-0 rounded-md border border-neutral-200 bg-neutral-50 px-4 py-3">
-      <p className="text-sm font-medium text-neutral-500">Answer</p>
+    <Card className="min-w-0">
+      <p className="text-xs font-medium tracking-wide text-faint uppercase">Answer</p>
       <MarkdownAnswer text={reply.answer} />
-      <dl className="mt-3 flex flex-col gap-1 text-sm text-neutral-600">
-        <div className="flex gap-2">
-          <dt className="font-medium text-neutral-800">{reply.cached ? "HIT" : "MISS"}</dt>
-          <dd>{reply.cached ? "Cached answer" : "Answered by the model"}</dd>
+      <dl className="mt-4 flex flex-col gap-2 text-sm text-secondary">
+        <div className="flex flex-wrap items-center gap-2">
+          <dt className="sr-only">Cache result</dt>
+          <dd className="flex flex-wrap items-center gap-2">
+            <Badge tone={reply.cached ? "success" : "warning"}>{reply.cached ? "HIT" : "MISS"}</Badge>
+            <span>{reply.cached ? "Cached answer" : "Answered by the model"}</span>
+          </dd>
         </div>
         {reply.cached ? (
           <>
             <div className="flex gap-2">
-              <dt>Similarity</dt>
-              <dd>{formatSimilarity(reply)}</dd>
+              <dt className="text-faint">Similarity</dt>
+              <dd className="text-ink">{formatSimilarity(reply)}</dd>
             </div>
             {reply.matchedQuery ? (
               <div className="flex gap-2">
-                <dt className="shrink-0">Matched query</dt>
-                <dd>{reply.matchedQuery}</dd>
+                <dt className="shrink-0 text-faint">Matched query</dt>
+                <dd className="text-ink">{reply.matchedQuery}</dd>
               </div>
             ) : null}
           </>
         ) : null}
       </dl>
-    </div>
+    </Card>
   );
 }
 

@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { benchmarkResult, metricsResult, type BenchmarkDashboard, type MetricsSnapshot, type MissReasonCount } from "../../api-responses";
-import { SiteHeader } from "../site-header";
-import { CardGrid, MetricCard, Panel, Section } from "./cards";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { CardGrid, MetricCard } from "@/components/ui/metric-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { BarChart } from "./charts";
 import { formatCategory, formatCount, formatMs, formatPercent, formatRatio, formatUsd } from "./format";
 
@@ -66,13 +72,11 @@ export function Dashboard({ apiUrl }: { apiUrl: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader
-        current="dashboard"
-        wide
-        description="Live traffic from this API process, and the latest offline benchmark."
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-8 sm:px-6">
+      <PageHeader
+        title="Analytics"
+        subtitle="Live traffic from this API process, and the latest offline benchmark."
       />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-6">
         <RuntimeMetrics
           metrics={metrics}
           loading={metricsLoading}
@@ -81,8 +85,7 @@ export function Dashboard({ apiUrl }: { apiUrl: string }) {
           onRefresh={() => void refresh()}
         />
         <BenchmarkMetrics benchmark={benchmark} loading={benchmarkLoading} missing={benchmarkMissing} error={benchmarkError} />
-      </main>
-    </div>
+    </main>
   );
 }
 
@@ -100,14 +103,9 @@ function RuntimeMetrics({
   onRefresh: () => void;
 }) {
   const refreshButton = (
-    <button
-      type="button"
-      onClick={onRefresh}
-      disabled={loading || refreshing}
-      className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:bg-neutral-300"
-    >
+    <Button type="button" onClick={onRefresh} disabled={loading || refreshing}>
       {refreshing ? "Refreshing…" : "Refresh"}
-    </button>
+    </Button>
   );
 
   return (
@@ -118,10 +116,10 @@ function RuntimeMetrics({
         description="Counts from requests handled by the running API. They reset when that process restarts."
         action={refreshButton}
       >
-        {loading ? <Status>Loading runtime metrics…</Status> : null}
-        {error ? <Alert>{error}</Alert> : null}
+        {loading ? <LoadingSkeleton label="Loading runtime metrics…" /> : null}
+        {error ? <ErrorState>{error}</ErrorState> : null}
         {!loading && !error && metrics?.totalRequests === 0 ? (
-          <Status>No requests have been recorded in this API process.</Status>
+          <EmptyState title="No requests yet" detail="Counts appear after this API process handles a chat request. They reset when that process restarts." />
         ) : null}
         {metrics && metrics.totalRequests > 0 ? <RuntimeFigures metrics={metrics} /> : null}
       </Section>
@@ -142,7 +140,7 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
       </CardGrid>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Panel title="Hits and misses">
+        <Card title="Hits and misses">
           <BarChart
             empty="No requests have been recorded."
             bars={[
@@ -150,8 +148,8 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
               { label: "MISS", value: metrics.cacheMisses, display: formatCount(metrics.cacheMisses) },
             ]}
           />
-        </Panel>
-        <Panel title="Latency">
+        </Card>
+        <Card title="Latency">
           <BarChart
             empty="No latency has been recorded."
             bars={[
@@ -162,7 +160,7 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
               { label: "LLM", value: metrics.averageLatencyMs.llm, display: formatMs(metrics.averageLatencyMs.llm) },
             ]}
           />
-        </Panel>
+        </Card>
       </div>
 
       <Section eyebrow="Live" title="Performance" description="Average request time for hits and misses. Embedding time includes only requests that ran the local model. LLM time includes only requests that called the model.">
@@ -198,7 +196,7 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
 
       <Section eyebrow="Live" title="Cache breakdown" description="Exact hits skip the embedding model. Semantic hits reuse a similar question. Miss reasons come from the decision already made for that request.">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Panel title="How answers were served">
+          <Card title="How answers were served">
             <BarChart
               empty="No cache decisions have been recorded."
               bars={[
@@ -207,8 +205,8 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
                 { label: "MISS", value: metrics.cacheMisses, display: formatCount(metrics.cacheMisses) },
               ]}
             />
-          </Panel>
-          <Panel title="Semantic miss reasons">
+          </Card>
+          <Card title="Semantic miss reasons">
             <BarChart
               empty={metrics.cacheMisses === 0 ? "No misses have been recorded." : "Miss reasons were not recorded."}
               bars={metrics.missReasons.map((item) => ({
@@ -217,7 +215,7 @@ function RuntimeFigures({ metrics }: { metrics: MetricsSnapshot }) {
                 display: formatCount(item.count),
               }))}
             />
-          </Panel>
+          </Card>
         </div>
       </Section>
     </div>
@@ -241,9 +239,9 @@ function BenchmarkMetrics({
       title="Evaluation"
       description="The latest saved report from the labeled dataset. This is not live traffic, and it does not change the production threshold."
     >
-      {loading ? <Status>Loading the benchmark report…</Status> : null}
-      {error ? <Alert>{error}</Alert> : null}
-      {missing ? <Status>No benchmark report has been saved yet.</Status> : null}
+      {loading ? <LoadingSkeleton label="Loading the benchmark report…" /> : null}
+      {error ? <ErrorState>{error}</ErrorState> : null}
+      {missing ? <EmptyState title="No benchmark report" detail="The saved evaluation report has not been written yet." /> : null}
       {benchmark ? <BenchmarkFigures benchmark={benchmark} /> : null}
     </Section>
   );
@@ -252,7 +250,7 @@ function BenchmarkMetrics({
 function BenchmarkFigures({ benchmark }: { benchmark: BenchmarkDashboard }) {
   return (
     <div className="flex flex-col gap-4">
-      <p className="max-w-3xl text-sm text-neutral-500">
+      <p className="max-w-3xl text-xs leading-5 text-faint">
         {benchmark.cases} cases · {benchmark.embeddingModel} · generated {benchmark.generatedAt} · production threshold{" "}
         {benchmark.productionThreshold.toFixed(2)}
         {benchmark.productionThresholdChanged ? " · this report changed the production threshold" : " · this report did not change the production threshold"}
@@ -267,7 +265,7 @@ function BenchmarkFigures({ benchmark }: { benchmark: BenchmarkDashboard }) {
         <MetricCard label="Benchmark LLM request cost" value={formatUsd(benchmark.averageLlmRequestUsd)} />
       </CardGrid>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Panel title="Threshold and hit rate">
+        <Card title="Threshold and hit rate">
           <BarChart
             max={1}
             empty="The report has no threshold rows."
@@ -277,8 +275,8 @@ function BenchmarkFigures({ benchmark }: { benchmark: BenchmarkDashboard }) {
               display: formatPercent(row.hitRate),
             }))}
           />
-        </Panel>
-        <Panel title="Hit rate by category">
+        </Card>
+        <Card title="Hit rate by category">
           <BarChart
             max={1}
             empty="The report has no category rows."
@@ -288,11 +286,11 @@ function BenchmarkFigures({ benchmark }: { benchmark: BenchmarkDashboard }) {
               display: formatPercent(row.hitRate),
             }))}
           />
-        </Panel>
+        </Card>
       </div>
-      <div className="overflow-x-auto rounded-md border border-neutral-200">
+      <div className="overflow-x-auto rounded-card border border-line">
         <table className="w-full min-w-[36rem] text-left text-sm">
-          <thead className="border-b border-neutral-200 text-neutral-600">
+          <thead className="border-b border-line text-secondary">
             <tr>
               <th className="px-3 py-2 font-medium">Category</th>
               <th className="px-3 py-2 font-medium">Cases</th>
@@ -303,34 +301,18 @@ function BenchmarkFigures({ benchmark }: { benchmark: BenchmarkDashboard }) {
           </thead>
           <tbody>
             {benchmark.categories.map((row) => (
-              <tr key={row.category} className="border-b border-neutral-100 last:border-0">
-                <td className="px-3 py-2">{formatCategory(row.category)}</td>
-                <td className="px-3 py-2">{formatCount(row.cases)}</td>
-                <td className="px-3 py-2">{formatPercent(row.hitRate)}</td>
-                <td className="px-3 py-2">{formatCount(row.falseHits)}</td>
-                <td className="px-3 py-2">{formatCount(row.falseMisses)}</td>
+              <tr key={row.category} className="border-b border-line last:border-0">
+                <td className="px-3 py-2 text-ink">{formatCategory(row.category)}</td>
+                <td className="px-3 py-2 text-secondary">{formatCount(row.cases)}</td>
+                <td className="px-3 py-2 text-secondary">{formatPercent(row.hitRate)}</td>
+                <td className="px-3 py-2 text-secondary">{formatCount(row.falseHits)}</td>
+                <td className="px-3 py-2 text-secondary">{formatCount(row.falseMisses)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
-  );
-}
-
-function Status({ children }: { children: string }) {
-  return (
-    <p className="text-sm text-neutral-500" role="status">
-      {children}
-    </p>
-  );
-}
-
-function Alert({ children }: { children: string }) {
-  return (
-    <p className="text-sm text-red-700" role="alert">
-      {children}
-    </p>
   );
 }
 

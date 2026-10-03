@@ -17,19 +17,19 @@ const components: Components = {
   ul: ({ children }) => <ul className="mt-3 list-disc space-y-1 pl-5 first:mt-0">{children}</ul>,
   ol: ({ children }) => <ol className="mt-3 list-decimal space-y-1 pl-5 first:mt-0">{children}</ol>,
   li: ({ children }) => <li className="leading-7">{children}</li>,
-  hr: () => <hr className="my-4 border-neutral-300" />,
+  hr: () => <hr className="my-4 border-line" />,
   a: ({ href, children }) => (
-    <a href={href} className="font-medium underline underline-offset-2">
+    <a href={href} className="font-medium text-accent underline underline-offset-2">
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="mt-3 border-l-2 border-neutral-300 pl-3 text-neutral-700 first:mt-0">
+    <blockquote className="mt-3 border-l-2 border-line-strong pl-3 text-secondary first:mt-0">
       {children}
     </blockquote>
   ),
   pre: ({ children }) => (
-    <pre className="mt-3 max-w-full overflow-x-auto rounded-md border border-neutral-200 bg-white p-3 font-mono text-sm leading-6 first:mt-0">
+    <pre className="mt-3 max-w-full overflow-x-auto rounded-control border border-line bg-canvas p-3 font-mono text-sm leading-6 text-ink first:mt-0">
       {children}
     </pre>
   ),
@@ -38,7 +38,7 @@ const components: Components = {
 
 export function MarkdownAnswer({ text }: { text: string }) {
   return (
-    <div className="answer-markdown mt-2 min-w-0 text-base text-neutral-900">
+    <div className="answer-markdown mt-2 min-w-0 text-base text-ink">
       <ReactMarkdown remarkPlugins={[remarkBreaks]} components={components} skipHtml>
         {text}
       </ReactMarkdown>
