@@ -4,20 +4,20 @@ import remarkBreaks from "remark-breaks";
 
 const components: Components = {
   h1: ({ children }) => (
-    <h1 className="mt-5 text-xl font-semibold tracking-tight first:mt-0">{children}</h1>
+    <h1 className="mt-6 text-xl font-semibold tracking-tight text-ink first:mt-0">{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 className="mt-5 text-lg font-semibold tracking-tight first:mt-0">{children}</h2>
+    <h2 className="mt-6 text-lg font-semibold tracking-tight text-ink first:mt-0">{children}</h2>
   ),
-  h3: ({ children }) => <h3 className="mt-4 text-base font-semibold first:mt-0">{children}</h3>,
-  h4: ({ children }) => <h4 className="mt-4 text-base font-semibold first:mt-0">{children}</h4>,
-  h5: ({ children }) => <h5 className="mt-3 text-sm font-semibold first:mt-0">{children}</h5>,
-  h6: ({ children }) => <h6 className="mt-3 text-sm font-semibold first:mt-0">{children}</h6>,
-  p: ({ children }) => <p className="mt-3 break-words leading-7 first:mt-0">{children}</p>,
-  ul: ({ children }) => <ul className="mt-3 list-disc space-y-1 pl-5 first:mt-0">{children}</ul>,
-  ol: ({ children }) => <ol className="mt-3 list-decimal space-y-1 pl-5 first:mt-0">{children}</ol>,
-  li: ({ children }) => <li className="leading-7">{children}</li>,
-  hr: () => <hr className="my-4 border-line" />,
+  h3: ({ children }) => <h3 className="mt-5 text-base font-semibold text-ink first:mt-0">{children}</h3>,
+  h4: ({ children }) => <h4 className="mt-4 text-base font-semibold text-ink first:mt-0">{children}</h4>,
+  h5: ({ children }) => <h5 className="mt-4 text-sm font-semibold text-ink first:mt-0">{children}</h5>,
+  h6: ({ children }) => <h6 className="mt-4 text-sm font-semibold text-ink first:mt-0">{children}</h6>,
+  p: ({ children }) => <p className="mt-3 break-words leading-7 text-ink first:mt-0">{children}</p>,
+  ul: ({ children }) => <ul className="mt-3 list-disc space-y-1.5 pl-5 text-ink first:mt-0">{children}</ul>,
+  ol: ({ children }) => <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-ink first:mt-0">{children}</ol>,
+  li: ({ children }) => <li className="leading-7 break-words">{children}</li>,
+  hr: () => <hr className="my-5 border-line" />,
   a: ({ href, children }) => (
     <a href={href} className="font-medium text-accent underline underline-offset-2">
       {children}
@@ -29,7 +29,7 @@ const components: Components = {
     </blockquote>
   ),
   pre: ({ children }) => (
-    <pre className="mt-3 max-w-full overflow-x-auto rounded-control border border-line bg-canvas p-3 font-mono text-sm leading-6 text-ink first:mt-0">
+    <pre className="mt-4 max-w-full overflow-x-auto rounded-control border border-line bg-canvas p-3 font-mono text-sm leading-6 text-ink first:mt-0">
       {children}
     </pre>
   ),
@@ -38,7 +38,7 @@ const components: Components = {
 
 export function MarkdownAnswer({ text }: { text: string }) {
   return (
-    <div className="answer-markdown mt-2 min-w-0 text-base text-ink">
+    <div className="answer-markdown min-w-0 max-w-full text-base text-ink">
       <ReactMarkdown remarkPlugins={[remarkBreaks]} components={components} skipHtml>
         {text}
       </ReactMarkdown>
