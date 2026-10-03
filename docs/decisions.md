@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-03 — Vercel API container
+
+The API can be built for Vercel Container Images from `Dockerfile.vercel`. That image follows `deploy/api.Dockerfile`: Debian Node, pnpm 10.20.0, the lockfile, and the MiniLM prefetch. It listens on `PORT` (80 in the image, which Vercel routes to) and `0.0.0.0`. `GEMINI_API_KEY` and `REDIS_URL` stay in the Vercel project environment. Redis stays an external Redis Stack service. Local development still defaults to port 3001. Cache decisions, the 0.85 threshold, embeddings, and Gemini retries are unchanged.
+
 ## 2026-10-02 — Production benchmark
 
 The Phase 21 API and web images were run locally against Redis Stack. Health reported Redis and the embedding model ready. Exact hits, semantic hits, a three-question miss attempt, and mixed exact-plus-semantic traffic were measured on the container. Gemini returned 429 or 503 for the new questions, so miss traffic stayed at those failed calls and the semantic volume reused an answer already in Redis. The 0.85 threshold, cache decisions, embeddings, safety guards, and provider retries were not changed. The live cost ratio was not recomputed, because the failed calls recorded no tokens. See `docs/production-benchmark.md`.
